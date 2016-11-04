@@ -63,7 +63,7 @@ if (params.subsample) {
 
   process MakeSmallTestData {
 
-    publishDir "outputs/smalltestdata"
+    publishDir "outputs/subsampled-data"
     tag "${sampleID}-${libID}-${laneID}"
 
     memory { 4.GB * task.attempt }
@@ -96,7 +96,7 @@ if (params.subsample) {
 
 if (params.validate) {
  process FastQValidator {
-   publishDir "validation/fqValidator", mode: 'copy'
+   publishDir "outputs/validate-fq", mode: 'copy'
    tag "${sampleID}-${libID}-${laneID}"
 
    module "singularity"
@@ -174,18 +174,19 @@ process Trim_galore {
   set sampleID, libID, laneID, file(fq1), file(fq2) from fastqFiles_trimgalore
 
   output:
-  set sampleID, libID, laneID, file(fq1), file(fq2) into trimmedFastqs
-  set sampleID, laneID, file(fq1), file(fq2) into trimmedFastqs_validator
+  set sampleID, laneID, file("*_val_1.fq.gz"), file("*_val_2.fq.gz") into trimmedFastqs
   file '*trimming_report.txt' into trimgalore_results
 
   """
-  trim_galore --paired --gzip ${fq1} ${fq2}
+  trim_galore --paired --length_1 20 --length_2 20 --gzip ${fq1} ${fq2} 
   """
 }
 
+trimmedFastqs.into{ trimmedFastqs_mapping; trimmedFastqs_validate}
+
 if (params.validate) {
  process FastQValidatorTrimmed {
-   publishDir "validation/fqValidator_trimmed", mode: 'copy'
+   publishDir "outputs/validate-trimmed-fq", mode: 'copy'
    tag "${sampleID}-${libID}-${laneID}"
 
    module "singularity"
@@ -197,7 +198,7 @@ if (params.validate) {
    maxErrors '-1'
 
    input:
-   set idSample, idLane, file(fq1), file(fq2) from trimmedFastqs_validator
+   set idSample, idLane, file(fq1), file(fq2) from trimmedFastqs_validate
 
    output:
    file '*.sanity.txt' into validated_trimmedfastqs
@@ -225,7 +226,6 @@ if (params.validate) {
  }
 }
 
-
 process Mapping {
   publishDir "outputs/mapped-bams"
   tag "${sampleID}-${libID}-${laneID}"
@@ -239,10 +239,10 @@ process Mapping {
 
   input:
   file params.genomeFasta
-  set sampleID, libID, laneID, file(fq1), file(fq2) from trimmedFastqs
+  set sampleID, libID, laneID, file(fq1), file(fq2) from trimmedFastqs_mapping
 
   output:
-  set sampleID, libID, laneID, file("${sampleID}_${laneID}.bam") into mappedBams
+  set sampleID, libID, laneID, file("*.bam") into mappedBams
 
   script:
   readGroupString="\"@RG\\tID:${sampleID}_${libID}_${laneID}\\tSM:${sampleID}\\tLB:${sampleID}_${libID}\\tPL:illumina\""
@@ -258,7 +258,7 @@ mappedBams.into { mappedBams_markduplicates; mappedBams_validate }
 
 if (params.validate) {
  process ValidateBam {
-   publishDir "validation/validateBams", mode: 'copy'
+   publishDir "outputs/validate-bams", mode: 'copy'
    tag "${sampleID}-${libID}-${laneID}"
    cpus { 8 * task.attempt }
    memory { 32.GB * task.attempt }
@@ -271,16 +271,15 @@ if (params.validate) {
    set idSample, idLane, file(bam) from mappedBams_validate
 
    output:
-   file("${idSample}_${idLane}.txt") into validated_mapped_bams
+   file("*.bam.validate") into validated_mapped_bams
 
    """
    java -jar ${params.picardDir}/picard.jar ValidateSamFile \
-         I=${idSample}_${idLane}.sorted.bam > ${idSample}_${idLane}.txt
+     I=${sampleID}_${libID}_${laneID}.sorted.bam > ${sampleID}_${libID}_${laneID}.bam.validate
 
    """
  }
 }
-
 
 process MarkDuplicates {
   publishDir "outputs/marked-duplicates-bams"
@@ -297,23 +296,23 @@ process MarkDuplicates {
   set sampleID, libID, laneID, file(bam) from mappedBams_markduplicates
 
   output:
-  set sampleID, libID, laneID, file("${sampleID}_${libID}_${laneID}.md.bam") into markduplicatesBams
-  set file("${sampleID}_${libID}_${laneID}.markduplicates.txt") into markduplicatesResults
+  set sampleID, libID, laneID, file("*.md.bam") into markduplicatesBams
+  set file("*.markduplicates.txt") into markduplicatesResults
 
   """
   mkdir -p picard_tmp
   java -jar ${params.picardDir}/picard.jar MarkDuplicates \
-        TMP_DIR=picard_tmp \
-        I=${bam} \
-        O=${sampleID}_${libID}_${laneID}.md.bam \
-        M=${sampleID}_${libID}_${laneID}.markduplicates.txt
+    TMP_DIR=picard_tmp \
+    I=${bam} \
+    O=${sampleID}_${libID}_${laneID}.md.bam \
+    M=${sampleID}_${libID}_${laneID}.markduplicates.txt
   """
 }
 
 markduplicatesBams.into { markduplicatesBams; markduplicatesBams_index; markduplicatesBams_flagstat; markduplicatesBams_metrics; markduplicatesBams_wgsMetrics ; markduplicatesBams_validate }
 
 process CollectMetrics {
-  publishDir "outputs/picardMetrics"
+  publishDir "outputs/picard-metrics"
   tag "${sampleID}-${libID}-${laneID}"
 
   cpus { 4 * task.attempt }
@@ -327,20 +326,20 @@ process CollectMetrics {
   set sampleID, libID, laneID, file(bam) from markduplicatesBams_metrics
 
   output:
-  set sampleID, libID, laneID, file("${sampleID}_${libID}_${laneID}.metrics") into metrics_md
+  set sampleID, libID, laneID, file("*.metrics") into metrics_md
 
   """
   mkdir -p picard_tmp
   java -jar ${params.picardDir}/picard.jar CollectMultipleMetrics \
-        TMP_DIR=picard_tmp \
-        I=${bam} \
-        O=${sampleID}_${libID}_${laneID}.metrics \
-        PROGRAM=CollectQualityYieldMetrics
+    TMP_DIR=picard_tmp \
+    I=${bam} \
+    O=${sampleID}_${libID}_${laneID}.metrics \
+    PROGRAM=CollectQualityYieldMetrics
   """
 }
 
 process CollectWgsMetrics {
-  publishDir "outputs/wgsMetrics"
+  publishDir "outputs/wgs-metrics"
   tag "${sampleID}-${libID}-${laneID}"
 
   cpus { 4 * task.attempt }
@@ -354,21 +353,21 @@ process CollectWgsMetrics {
   set sampleID, libID, laneID, file(bam) from markduplicatesBams_wgsMetrics
 
   output:
-  set sampleID, libID, laneID, file("${sampleID}_${libID}_${laneID}.wgs_metrics") into wgsMetrics_md
+  set sampleID, libID, laneID, file("*.wgs_metrics") into wgsMetrics_md
 
   """
   mkdir -p picard_tmp
   java -jar ${params.picardDir}/picard.jar CollectWgsMetrics \
-        TMP_DIR=picard_tmp \
-        R=${params.genomeFasta} \
-        I=${bam} \
-        O=${sampleID}_${libID}_${laneID}.wgs_metrics
+    TMP_DIR=picard_tmp \
+    R=${params.genomeFasta} \
+    I=${bam} \
+    O=${sampleID}_${libID}_${laneID}.wgs_metrics
   """
 }
 
 
 process FlagStatMd {
-  publishDir "outputs/flagStatMd"
+  publishDir "outputs/flagstat-md"
     tag "${sampleID}-${libID}-${laneID}"
 
   cpus { 4 * task.attempt }
@@ -378,19 +377,18 @@ process FlagStatMd {
   maxRetries 3
   maxErrors '-1'
   
-    input:
-      set sampleID, libID, laneID, file(bam) from markduplicatesBams_flagstat
+  input:
+  set sampleID, libID, laneID, file(bam) from markduplicatesBams_flagstat
 
-      output:
-      file("${sampleID}_${libID}_${laneID}_md.flagstat.txt") into flagstat_md
+  output:
+  file("*_md.flagstat.txt") into flagstat_md
 
-      """
-      samtools flagstat ${sampleID}_${libID}_${laneID}.md.bam > ${sampleID}_${libID}_${laneID}_md.flagstat.txt
-      """
+  """
+  samtools flagstat ${sampleID}_${libID}_${laneID}.md.bam > ${sampleID}_${libID}_${laneID}_md.flagstat.txt
+  """
 }
 
 process IndexBams {
-  "outputs/createIndexes"
   tag "${sampleID}-${libID}-${laneID}"
   
   cpus 8
@@ -404,7 +402,7 @@ process IndexBams {
   set sampleID, libID, laneID, file(bam) from markduplicatesBams_index
 
   output:
-  set sampleID, libID, laneID, file("${sampleID}_${libID}_${laneID}.md.bam"), file("${sampleID}_${libID}_${laneID}.md.bam.bai") into markduplicatesBamsBais
+  set sampleID, libID, laneID, file(bam), file("*.md.bam.bai") into markduplicatesBamsBais
 
   """
   samtools index ${bam}
@@ -433,7 +431,7 @@ process CreateIntervals {
   file gd from file(params.genomeDict)
 
   output:
-  set sampleID, file("${sampleID}.intervals") into intervals
+  set sampleID, file("*.intervals") into intervals
 
   script:
   input = bams.collect{"-I $it"}.join(' ')
@@ -489,7 +487,7 @@ process Realign {
 realignedBams.into { realignedBams_flagstat; realignedBams_metrics; realignedBams_wgsMetrics}
 
 process FlagStatRealign {
-  publishDir "outputs/flagStatRln"
+  publishDir "outputs/flagstat-realigned"
   tag "$sampleID"
 
   cpus { 4 * task.attempt }
@@ -503,7 +501,7 @@ process FlagStatRealign {
   set sampleID, file(bam), file(bai) from realignedBams_flagstat
 
   output:
-  file("${sampleID}_rln.flagstat.txt") into flagstat_realign
+  file("*_rln.flagstat.txt") into flagstat_realign
 
   """
   samtools flagstat ${sampleID}.md.real.bam > ${sampleID}_rln.flagstat.txt
@@ -511,7 +509,7 @@ process FlagStatRealign {
 }
 
 process CollectMetricsRealign {
-  publishDir "outputs/picardMetricsRealign"
+  publishDir "outputs/picard-metrics-realigned"
   tag "$sampleID"
   
   cpus { 4 * task.attempt }
@@ -525,7 +523,7 @@ process CollectMetricsRealign {
   set sampleID, file(bam), file(bai) from realignedBams_metrics
 
   output:
-  set sampleID, libID, laneID, file("${sampleID}.metrics") into metrics_realign
+  set sampleID, libID, laneID, file("*.metrics") into metrics_realign
 
   """
   mkdir -p picard_tmp
@@ -538,7 +536,7 @@ process CollectMetricsRealign {
 }
 
 process CollectWgsMetrics {
-  publishDir "outputs/wgsMetrics"
+  publishDir "outputs/wgs-metrics-realigned"
   tag "$sampleID"
   
   cpus { 4 * task.attempt }
@@ -552,7 +550,7 @@ process CollectWgsMetrics {
   set sampleID, file(bam), file(bai) from realignedBams_wgsMetrics
 
   output:
-  set sampleID, file("${sampleID}.wgs_metrics") into realign_wgs_metrics
+  set sampleID, file("*.wgs_metrics") into realign_wgs_metrics
 
   """
   mkdir -p picard_tmp
