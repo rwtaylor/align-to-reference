@@ -178,7 +178,7 @@ process Trim_galore {
   file '*trimming_report.txt' into trimgalore_results
 
   """
-  trim_galore --paired --length_1 20 --length_2 20 --gzip ${fq1} ${fq2} 
+  trim_galore --paired --length 20 --gzip ${fq1} ${fq2} 
   """
 }
 
