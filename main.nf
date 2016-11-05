@@ -583,6 +583,7 @@ process CollectAlignmentSummaryMetrics {
   mkdir -p picard_tmp
   java -jar ${params.picardDir}/picard.jar CollectAlignmentSummaryMetrics \
         TMP_DIR=picard_tmp \
+        R=${params.genomeFasta} \
         I=${bam} \
         O=${sampleID}
   """
