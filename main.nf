@@ -326,7 +326,7 @@ process CollectMetrics {
   set sampleID, libID, laneID, file(bam) from markduplicatesBams_metrics
 
   output:
-  set sampleID, libID, laneID, file("*.metrics") into metrics_md
+  set sampleID, libID, laneID, file("${sampleID}.*") into metrics_md
 
   """
   mkdir -p picard_tmp
@@ -353,7 +353,7 @@ process CollectWgsMetrics {
   set sampleID, libID, laneID, file(bam) from markduplicatesBams_wgsMetrics
 
   output:
-  set sampleID, libID, laneID, file("*.wgs_metrics") into wgsMetrics_md
+  set sampleID, libID, laneID, file("${sampleID}.*") into wgsMetrics_md
 
   """
   mkdir -p picard_tmp
@@ -523,7 +523,7 @@ process CollectMetricsRealign {
   set sampleID, file(bam), file(bai) from realignedBams_metrics
 
   output:
-  set sampleID, libID, laneID, file("*.metrics") into metrics_realign
+  set sampleID, libID, laneID, file("${sampleID}.*") into metrics_realign
 
   """
   mkdir -p picard_tmp
@@ -550,7 +550,7 @@ process CollectWgsMetrics {
   set sampleID, file(bam), file(bai) from realignedBams_wgsMetrics
 
   output:
-  set sampleID, file("*.wgs_metrics") into realign_wgs_metrics
+  set sampleID, file("${sampleID}.*") into realign_wgs_metrics
 
   """
   mkdir -p picard_tmp
