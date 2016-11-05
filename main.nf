@@ -174,7 +174,7 @@ process Trim_galore {
   set sampleID, libID, laneID, file(fq1), file(fq2) from fastqFiles_trimgalore
 
   output:
-  set sampleID, laneID, file("*_val_1.fq.gz"), file("*_val_2.fq.gz") into trimmedFastqs
+  set sampleID, libID, laneID, file("*_val_1.fq.gz"), file("*_val_2.fq.gz") into trimmedFastqs
   file '*trimming_report.txt' into trimgalore_results
 
   """
