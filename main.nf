@@ -484,7 +484,7 @@ process Realign {
   """
 }
 
-realignedBams.into { realignedBams_flagstat; realignedBams_metrics; realignedBams_wgsMetrics}
+realignedBams.into { realignedBams_flagstat; realignedBams_metrics; realignedBams_wgsMetrics; realignedBams_collectAlignment; realignedBams_preseq}
 
 process FlagStatRealign {
   publishDir "outputs/flagstat-realigned"
@@ -559,6 +559,55 @@ process CollectWgsMetrics {
         R=${params.genomeFasta} \
         I=${bam} \
         O=${sampleID}.wgs_metrics
+  """
+}
+
+process CollectAlignmentSummaryMetrics {
+  publishDir "outputs/allignmentsummary-realigned"
+  tag "$sampleID"
+  
+  cpus { 4 * task.attempt }
+  memory { 16.GB * task.attempt }
+  time { 16.h * task.attempt }
+  errorStrategy { task.exitStatus == 143 ? 'retry' : 'finish' }
+  maxRetries 3
+  maxErrors '-1'
+  
+  input:
+  set sampleID, file(bam), file(bai) from realignedBams_collectAlignment
+
+  output:
+  set sampleID, libID, laneID, file("${sampleID}*") into collectAlignment_realign
+
+  """
+  mkdir -p picard_tmp
+  java -jar ${params.picardDir}/picard.jar CollectAlignmentSummaryMetrics \
+        TMP_DIR=picard_tmp \
+        I=${bam} \
+        O=${sampleID}
+  """
+}
+
+process Preseq {
+  publishDir "outputs/preseq-realigned"
+  tag "$sampleID"
+  
+  cpus { 4 * task.attempt }
+  memory { 16.GB * task.attempt }
+  time { 16.h * task.attempt }
+  errorStrategy { task.exitStatus == 143 ? 'retry' : 'finish' }
+  maxRetries 3
+  maxErrors '-1'
+  
+  input:
+  set sampleID, file(bam), file(bai) from realignedBams_preseq
+
+  output:
+  set sampleID, libID, laneID, file("${sampleID}*") into preseq_realig
+
+  """
+  preseq c_curve -o ${sampleID}.c_curve -bam ${bam}
+  preseq lc_extrap -o ${sampleID}.lc_extrap -bam ${bam}
   """
 }
 
