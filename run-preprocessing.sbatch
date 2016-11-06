@@ -6,5 +6,5 @@
 #SBATCH --partition=dpetrov,hns
 #################
 
-export NXF_VER=0.22.4-SNAPSHOT
+#export NXF_VER=0.22.4-SNAPSHOT
 nextflow run rwtaylor/preprocessing -resume -c nextflow.config --samples samples.tsv -with-timeline -with-trace -with-dag preprocessing.png

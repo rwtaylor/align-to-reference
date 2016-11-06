@@ -142,7 +142,7 @@ process FastQC {
   tag "${sampleID}-${libID}-${laneID}"
 
   cpus { 2 * task.attempt }
-  time { 4.h + (2 * task.attempt) }
+  time { 4.h + (2.h * task.attempt) }
   errorStrategy { task.exitStatus == 143 ? 'retry' : 'ignore' }
   maxRetries 3
   maxErrors '-1'
