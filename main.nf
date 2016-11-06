@@ -95,45 +95,45 @@ if (params.subsample) {
 }
 
 if (params.validate) {
- process FastQValidator {
-   publishDir "outputs/validate-fq", mode: 'copy'
-   tag "${sampleID}-${libID}-${laneID}"
+  process FastQValidator {
+    publishDir "outputs/validate-fq", mode: 'copy'
+    tag "${sampleID}-${libID}-${laneID}"
 
-   module "singularity"
+    module "singularity"
 
-   memory { 8.GB * task.attempt }
-   time { 4.h * task.attempt }
-   errorStrategy { task.exitStatus == 143 ? 'retry' : 'finish' }
-   maxRetries 3
-   maxErrors '-1'
+    cpus { 1 * task.attempt }
+    time { 4.h + (2 * task.attempt) }
+    errorStrategy { task.exitStatus == 143 ? 'retry' : 'finish' }
+    maxRetries 3
+    maxErrors '-1'
 
-   input:
-   set idSample, idLane, file(fq1), file(fq2) from fastqFiles_fastqvalidator
+    input:
+    set idSample, idLane, file(fq1), file(fq2) from fastqFiles_fastqvalidator
 
-   output:
-   file '*.sanity.txt' into validated_fastqs
+    output:
+    file '*.sanity.txt' into validated_fastqs
 
-   """
-   echo "# # # # # # # # # # # # # # # # # # # # # # # # # # # # # #" > ${idSample}_${idLane}.sanity.txt
-   echo "FastQValidator and biawk Sanity Check" > ${idSample}_${idLane}.sanity.txt
-   echo "- - - - - - - - - - - - - - - - - - - - - - - - - - - - - -" >> ${idSample}_${idLane}.sanity.txt
-   echo "FastQValidator results for ${fq1}" >> ${idSample}_${idLane}.sanity.txt
-   singularity exec /scratch/PI/dpetrov/containers/singularity/bioinformatics.img fastQValidator --file ${fq1}  >> ${idSample}_${idLane}.sanity.txt
-   echo "- - - - - - - - - - - - - - - - - - - - - - - - - - - - - -" >> ${idSample}_${idLane}.sanity.txt
-   echo "FastQValidator results for ${fq2}" >> ${idSample}_${idLane}.sanity.txt
-   singularity exec /scratch/PI/dpetrov/containers/singularity/bioinformatics.img fastQValidator --file ${fq2} >> ${idSample}_${idLane}.sanity.txt
+    """
+    echo "# # # # # # # # # # # # # # # # # # # # # # # # # # # # # #" > ${idSample}_${idLane}.sanity.txt
+    echo "FastQValidator and biawk Sanity Check" > ${idSample}_${idLane}.sanity.txt
+    echo "- - - - - - - - - - - - - - - - - - - - - - - - - - - - - -" >> ${idSample}_${idLane}.sanity.txt
+    echo "FastQValidator results for ${fq1}" >> ${idSample}_${idLane}.sanity.txt
+    singularity exec /scratch/PI/dpetrov/containers/singularity/bioinformatics.img fastQValidator --file ${fq1}  >> ${idSample}_${idLane}.sanity.txt
+    echo "- - - - - - - - - - - - - - - - - - - - - - - - - - - - - -" >> ${idSample}_${idLane}.sanity.txt
+    echo "FastQValidator results for ${fq2}" >> ${idSample}_${idLane}.sanity.txt
+    singularity exec /scratch/PI/dpetrov/containers/singularity/bioinformatics.img fastQValidator --file ${fq2} >> ${idSample}_${idLane}.sanity.txt
 
-   echo "# # # # # # # # # # # # # # # # # # # # # # # # # # # # # #" >> ${idSample}_${idLane}.sanity.txt
-   echo “Check if length of sequence equals quality score length”  >> ${idSample}_${idLane}.sanity.txt
-   echo "- - - - - - - - - - - - - - - - - - - - - - - - - - - - - -" >> ${idSample}_${idLane}.sanity.txt
-   echo "Check results for ${fq1}" >> ${idSample}_${idLane}.sanity.txt
-   zcat ${fq1} | bioawk -c fastx '{if (length(\$seq)!=length(\$qual)) print "Offending: " NR}' >> ${idSample}_${idLane}.sanity.txt
-   echo "- - - - - - - - - - - - - - - - - - - - - - - - - - - - - -" >> ${idSample}_${idLane}.sanity.txt
-   echo "Check results for ${fq2}" >> ${idSample}_${idLane}.sanity.txt
-   zcat ${fq2} | bioawk -c fastx '{if (length(\$seq)!=length(\$qual)) print "Offending: " NR}' >> ${idSample}_${idLane}.sanity.txt
+    echo "# # # # # # # # # # # # # # # # # # # # # # # # # # # # # #" >> ${idSample}_${idLane}.sanity.txt
+    echo “Check if length of sequence equals quality score length”  >> ${idSample}_${idLane}.sanity.txt
+    echo "- - - - - - - - - - - - - - - - - - - - - - - - - - - - - -" >> ${idSample}_${idLane}.sanity.txt
+    echo "Check results for ${fq1}" >> ${idSample}_${idLane}.sanity.txt
+    zcat ${fq1} | bioawk -c fastx '{if (length(\$seq)!=length(\$qual)) print "Offending: " NR}' >> ${idSample}_${idLane}.sanity.txt
+    echo "- - - - - - - - - - - - - - - - - - - - - - - - - - - - - -" >> ${idSample}_${idLane}.sanity.txt
+    echo "Check results for ${fq2}" >> ${idSample}_${idLane}.sanity.txt
+    zcat ${fq2} | bioawk -c fastx '{if (length(\$seq)!=length(\$qual)) print "Offending: " NR}' >> ${idSample}_${idLane}.sanity.txt
 
-   """
- }
+     """
+  }
 }
 
 
@@ -141,8 +141,8 @@ process FastQC {
   publishDir "outputs/fastqc"
   tag "${sampleID}-${libID}-${laneID}"
 
-  memory { 4.GB * task.attempt }
-  time { 4.h * task.attempt }
+  cpus { 1 * task.attempt }
+  time { 4.h + (2 * task.attempt) }
   errorStrategy { task.exitStatus == 143 ? 'retry' : 'finish' }
   maxRetries 3
   maxErrors '-1'
@@ -191,8 +191,8 @@ if (params.validate) {
 
    module "singularity"
 
-   memory { 8.GB * task.attempt }
-   time { 4.h * task.attempt }
+   cpus { 1 * task.attempt }
+   time { 4.h + (2 * task.attempt) }
    errorStrategy { task.exitStatus == 143 ? 'retry' : 'finish' }
    maxRetries 3
    maxErrors '-1'
@@ -260,9 +260,9 @@ if (params.validate) {
  process ValidateBam {
    publishDir "outputs/validate-bams", mode: 'copy'
    tag "${sampleID}-${libID}-${laneID}"
-   cpus { 8 * task.attempt }
-   memory { 32.GB * task.attempt }
-   time { 16.h * task.attempt }
+
+   cpus { 1 * task.attempt }
+   time { 4.h + (2 * task.attempt) }
    errorStrategy { task.exitStatus == 143 ? 'retry' : 'finish' }
    maxRetries 3
    maxErrors '-1'
@@ -315,9 +315,8 @@ process CollectMetrics {
   publishDir "outputs/picard-metrics"
   tag "${sampleID}-${libID}-${laneID}"
 
-  cpus { 4 * task.attempt }
-  memory { 16.GB * task.attempt }
-  time { 16.h * task.attempt }
+  cpus { 1 * task.attempt }
+  time { 4.h + (2 * task.attempt) }
   errorStrategy { task.exitStatus == 143 ? 'retry' : 'finish' }
   maxRetries 3
   maxErrors '-1'
@@ -342,9 +341,8 @@ process CollectWgsMetrics {
   publishDir "outputs/wgs-metrics"
   tag "${sampleID}-${libID}-${laneID}"
 
-  cpus { 4 * task.attempt }
-  memory { 16.GB * task.attempt }
-  time { 16.h * task.attempt }
+  cpus { 1 * task.attempt }
+  time { 4.h + (2 * task.attempt) }
   errorStrategy { task.exitStatus == 143 ? 'retry' : 'finish' }
   maxRetries 3
   maxErrors '-1'
@@ -370,9 +368,8 @@ process FlagStatMd {
   publishDir "outputs/flagstat-md"
     tag "${sampleID}-${libID}-${laneID}"
 
-  cpus { 4 * task.attempt }
-  memory { 16.GB * task.attempt }
-  time { 16.h * task.attempt }
+  cpus { 1 * task.attempt }
+  time { 4.h + (2 * task.attempt) }
   errorStrategy { task.exitStatus == 143 ? 'retry' : 'finish' }
   maxRetries 3
   maxErrors '-1'
@@ -391,9 +388,9 @@ process FlagStatMd {
 process IndexBams {
   tag "${sampleID}-${libID}-${laneID}"
   
-  cpus 8
-  memory { 32.GB * task.attempt }
-  time { 8.h * task.attempt }
+  cpus { 2 + (1 * task.attempt) }
+  memory { 8.GB  + (4 * task.attempt) }
+  time { 4.h + (2 * task.attempt) }
   errorStrategy { task.exitStatus == 143 ? 'retry' : 'finish' }
   maxRetries 3
   maxErrors '-1'
@@ -490,9 +487,8 @@ process FlagStatRealign {
   publishDir "outputs/flagstat-realigned"
   tag "$sampleID"
 
-  cpus { 4 * task.attempt }
-  memory { 16.GB * task.attempt }
-  time { 16.h * task.attempt }
+  cpus { 1 * task.attempt }
+  time { 4.h + (2 * task.attempt) }
   errorStrategy { task.exitStatus == 143 ? 'retry' : 'finish' }
   maxRetries 3
   maxErrors '-1'
@@ -512,9 +508,8 @@ process CollectMetricsRealign {
   publishDir "outputs/picard-metrics-realigned"
   tag "$sampleID"
   
-  cpus { 4 * task.attempt }
-  memory { 16.GB * task.attempt }
-  time { 16.h * task.attempt }
+  cpus { 1 * task.attempt }
+  time { 4.h + (2 * task.attempt) }
   errorStrategy { task.exitStatus == 143 ? 'retry' : 'finish' }
   maxRetries 3
   maxErrors '-1'
@@ -539,9 +534,8 @@ process CollectWgsMetrics {
   publishDir "outputs/wgs-metrics-realigned"
   tag "$sampleID"
   
-  cpus { 4 * task.attempt }
-  memory { 16.GB * task.attempt }
-  time { 16.h * task.attempt }
+  cpus { 1 * task.attempt }
+  time { 4.h + (2 * task.attempt) }
   errorStrategy { task.exitStatus == 143 ? 'retry' : 'finish' }
   maxRetries 3
   maxErrors '-1'
@@ -566,9 +560,8 @@ process CollectAlignmentSummaryMetrics {
   publishDir "outputs/allignmentsummary-realigned"
   tag "$sampleID"
   
-  cpus { 4 * task.attempt }
-  memory { 16.GB * task.attempt }
-  time { 16.h * task.attempt }
+  cpus { 1 * task.attempt }
+  time { 4.h + (2 * task.attempt) }
   errorStrategy { task.exitStatus == 143 ? 'retry' : 'finish' }
   maxRetries 3
   maxErrors '-1'
@@ -593,9 +586,8 @@ process Preseq {
   publishDir "outputs/preseq-realigned"
   tag "$sampleID"
   
-  cpus { 4 * task.attempt }
-  memory { 16.GB * task.attempt }
-  time { 16.h * task.attempt }
+  cpus { 1 * task.attempt }
+  time { 6.h + (2 * task.attempt) }
   errorStrategy { task.exitStatus == 143 ? 'retry' : 'finish' }
   maxRetries 3
   maxErrors '-1'
