@@ -101,9 +101,9 @@ if (params.validate) {
 
     module "singularity"
 
-    cpus { 1 * task.attempt }
+    cpus { 2 * task.attempt }
     time { 4.h + (2 * task.attempt) }
-    errorStrategy { task.exitStatus == 143 ? 'retry' : 'finish' }
+    errorStrategy { task.exitStatus == 143 ? 'retry' : 'ignore' }
     maxRetries 3
     maxErrors '-1'
 
@@ -141,9 +141,9 @@ process FastQC {
   publishDir "outputs/fastqc"
   tag "${sampleID}-${libID}-${laneID}"
 
-  cpus { 1 * task.attempt }
+  cpus { 2 * task.attempt }
   time { 4.h + (2 * task.attempt) }
-  errorStrategy { task.exitStatus == 143 ? 'retry' : 'finish' }
+  errorStrategy { task.exitStatus == 143 ? 'retry' : 'ignore' }
   maxRetries 3
   maxErrors '-1'
 
@@ -165,7 +165,7 @@ process Trim_galore {
 
   cpus 4
   memory { 16.GB * task.attempt }
-  time { 16.h * task.attempt }
+  time { 12.h * task.attempt }
   errorStrategy { task.exitStatus == 143 ? 'retry' : 'finish' }
   maxRetries 3
   maxErrors '-1'
@@ -191,9 +191,9 @@ if (params.validate) {
 
    module "singularity"
 
-   cpus { 1 * task.attempt }
+   cpus { 2 * task.attempt }
    time { 4.h + (2 * task.attempt) }
-   errorStrategy { task.exitStatus == 143 ? 'retry' : 'finish' }
+   errorStrategy { task.exitStatus == 143 ? 'retry' : 'ignore' }
    maxRetries 3
    maxErrors '-1'
 
@@ -232,7 +232,7 @@ process Mapping {
 
   cpus 8
   memory { 32.GB * task.attempt }
-  time { 20.h * task.attempt }
+  time { 24.h + (6.h * task.attempt) }
   errorStrategy { task.exitStatus == 143 ? 'retry' : 'finish' }
   maxRetries 3
   maxErrors '-1'
@@ -261,9 +261,9 @@ if (params.validate) {
    publishDir "outputs/validate-bams", mode: 'copy'
    tag "${sampleID}-${libID}-${laneID}"
 
-   cpus { 1 * task.attempt }
+   cpus { 2 * task.attempt }
    time { 4.h + (2 * task.attempt) }
-   errorStrategy { task.exitStatus == 143 ? 'retry' : 'finish' }
+   errorStrategy { task.exitStatus == 143 ? 'retry' : 'ignore' }
    maxRetries 3
    maxErrors '-1'
 
@@ -287,7 +287,7 @@ process MarkDuplicates {
 
   cpus 8
   memory { 32.GB * task.attempt }
-  time { 20.h * task.attempt }
+  time { 24.h + (6.h * task.attempt) }
   errorStrategy { task.exitStatus == 143 ? 'retry' : 'finish' }
   maxRetries 3
   maxErrors '-1'
@@ -315,9 +315,9 @@ process CollectMetrics {
   publishDir "outputs/picard-metrics"
   tag "${sampleID}-${libID}-${laneID}"
 
-  cpus { 1 * task.attempt }
+  cpus { 2 * task.attempt }
   time { 4.h + (2 * task.attempt) }
-  errorStrategy { task.exitStatus == 143 ? 'retry' : 'finish' }
+  errorStrategy { task.exitStatus == 143 ? 'retry' : 'ignore' }
   maxRetries 3
   maxErrors '-1'
 
@@ -341,9 +341,9 @@ process CollectWgsMetrics {
   publishDir "outputs/wgs-metrics"
   tag "${sampleID}-${libID}-${laneID}"
 
-  cpus { 1 * task.attempt }
+  cpus { 2 * task.attempt }
   time { 4.h + (2 * task.attempt) }
-  errorStrategy { task.exitStatus == 143 ? 'retry' : 'finish' }
+  errorStrategy { task.exitStatus == 143 ? 'retry' : 'ignore' }
   maxRetries 3
   maxErrors '-1'
 
@@ -368,9 +368,9 @@ process FlagStatMd {
   publishDir "outputs/flagstat-md"
     tag "${sampleID}-${libID}-${laneID}"
 
-  cpus { 1 * task.attempt }
+  cpus { 2 * task.attempt }
   time { 4.h + (2 * task.attempt) }
-  errorStrategy { task.exitStatus == 143 ? 'retry' : 'finish' }
+  errorStrategy { task.exitStatus == 143 ? 'retry' : 'ignore' }
   maxRetries 3
   maxErrors '-1'
   
@@ -415,8 +415,8 @@ process CreateIntervals {
   tag "$sampleID"
 
   cpus 8
-  memory { 32.GB * task.attempt }
-  time { 8.h * task.attempt }
+  memory { 32.GB + (8.GB * task.attempt) }
+  time { 12.h * task.attempt }
   errorStrategy { task.exitStatus == 143 ? 'retry' : 'finish' }
   maxRetries 3
   maxErrors '-1'
@@ -452,8 +452,8 @@ process Realign {
   publishDir "outputs/realigned-bams"
   tag "$sampleID"
 
-  memory { 32.GB * task.attempt }
-  time { 20.h * task.attempt }
+  memory { 32.GB + (8.GB * task.attempt) }
+  time { 12.h * task.attempt }
   errorStrategy { task.exitStatus == 143 ? 'retry' : 'finish' }
   maxRetries 3
   maxErrors '-1'
@@ -487,9 +487,9 @@ process FlagStatRealign {
   publishDir "outputs/flagstat-realigned"
   tag "$sampleID"
 
-  cpus { 1 * task.attempt }
+  cpus { 2 * task.attempt }
   time { 4.h + (2 * task.attempt) }
-  errorStrategy { task.exitStatus == 143 ? 'retry' : 'finish' }
+  errorStrategy { task.exitStatus == 143 ? 'retry' : 'ignore' }
   maxRetries 3
   maxErrors '-1'
 
@@ -508,9 +508,9 @@ process CollectMetricsRealign {
   publishDir "outputs/picard-metrics-realigned"
   tag "$sampleID"
   
-  cpus { 1 * task.attempt }
+  cpus { 2 * task.attempt }
   time { 4.h + (2 * task.attempt) }
-  errorStrategy { task.exitStatus == 143 ? 'retry' : 'finish' }
+  errorStrategy { task.exitStatus == 143 ? 'retry' : 'ignore' }
   maxRetries 3
   maxErrors '-1'
   
@@ -534,9 +534,9 @@ process CollectWgsMetrics {
   publishDir "outputs/wgs-metrics-realigned"
   tag "$sampleID"
   
-  cpus { 1 * task.attempt }
+  cpus { 2 * task.attempt }
   time { 4.h + (2 * task.attempt) }
-  errorStrategy { task.exitStatus == 143 ? 'retry' : 'finish' }
+  errorStrategy { task.exitStatus == 143 ? 'retry' : 'ignore' }
   maxRetries 3
   maxErrors '-1'
 
@@ -560,9 +560,9 @@ process CollectAlignmentSummaryMetrics {
   publishDir "outputs/allignmentsummary-realigned"
   tag "$sampleID"
   
-  cpus { 1 * task.attempt }
+  cpus { 2 * task.attempt }
   time { 4.h + (2 * task.attempt) }
-  errorStrategy { task.exitStatus == 143 ? 'retry' : 'finish' }
+  errorStrategy { task.exitStatus == 143 ? 'retry' : 'ignore' }
   maxRetries 3
   maxErrors '-1'
   
@@ -586,9 +586,9 @@ process Preseq {
   publishDir "outputs/preseq-realigned"
   tag "$sampleID"
   
-  cpus { 1 * task.attempt }
+  cpus { 2 * task.attempt }
   time { 6.h + (2 * task.attempt) }
-  errorStrategy { task.exitStatus == 143 ? 'retry' : 'finish' }
+  errorStrategy { task.exitStatus == 143 ? 'retry' : 'ignore' }
   maxRetries 3
   maxErrors '-1'
   
