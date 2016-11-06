@@ -389,7 +389,7 @@ process IndexBams {
   tag "${sampleID}-${libID}-${laneID}"
   
   cpus { 2 + (1 * task.attempt) }
-  memory { 8.GB  + (4 * task.attempt) }
+  memory { 8.GB  + (4.GB * task.attempt) }
   time { 4.h + (2.h * task.attempt) }
   errorStrategy { task.exitStatus == 143 ? 'retry' : 'finish' }
   maxRetries 3
