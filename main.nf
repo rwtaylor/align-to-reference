@@ -102,7 +102,7 @@ if (params.validate) {
     module "singularity"
 
     cpus { 2 * task.attempt }
-    time { 4.h + (2 * task.attempt) }
+    time { 4.h + (2.h * task.attempt) }
     errorStrategy { task.exitStatus == 143 ? 'retry' : 'ignore' }
     maxRetries 3
     maxErrors '-1'
@@ -192,7 +192,7 @@ if (params.validate) {
    module "singularity"
 
    cpus { 2 * task.attempt }
-   time { 4.h + (2 * task.attempt) }
+   time { 4.h + (2.h * task.attempt) }
    errorStrategy { task.exitStatus == 143 ? 'retry' : 'ignore' }
    maxRetries 3
    maxErrors '-1'
@@ -262,7 +262,7 @@ if (params.validate) {
    tag "${sampleID}-${libID}-${laneID}"
 
    cpus { 2 * task.attempt }
-   time { 4.h + (2 * task.attempt) }
+   time { 4.h + (2.h * task.attempt) }
    errorStrategy { task.exitStatus == 143 ? 'retry' : 'ignore' }
    maxRetries 3
    maxErrors '-1'
@@ -316,7 +316,7 @@ process CollectMetrics {
   tag "${sampleID}-${libID}-${laneID}"
 
   cpus { 2 * task.attempt }
-  time { 4.h + (2 * task.attempt) }
+  time { 4.h + (2.h * task.attempt) }
   errorStrategy { task.exitStatus == 143 ? 'retry' : 'ignore' }
   maxRetries 3
   maxErrors '-1'
@@ -342,7 +342,7 @@ process CollectWgsMetrics {
   tag "${sampleID}-${libID}-${laneID}"
 
   cpus { 2 * task.attempt }
-  time { 4.h + (2 * task.attempt) }
+  time { 4.h + (2.h * task.attempt) }
   errorStrategy { task.exitStatus == 143 ? 'retry' : 'ignore' }
   maxRetries 3
   maxErrors '-1'
@@ -369,7 +369,7 @@ process FlagStatMd {
     tag "${sampleID}-${libID}-${laneID}"
 
   cpus { 2 * task.attempt }
-  time { 4.h + (2 * task.attempt) }
+  time { 4.h + (2.h * task.attempt) }
   errorStrategy { task.exitStatus == 143 ? 'retry' : 'ignore' }
   maxRetries 3
   maxErrors '-1'
@@ -390,7 +390,7 @@ process IndexBams {
   
   cpus { 2 + (1 * task.attempt) }
   memory { 8.GB  + (4 * task.attempt) }
-  time { 4.h + (2 * task.attempt) }
+  time { 4.h + (2.h * task.attempt) }
   errorStrategy { task.exitStatus == 143 ? 'retry' : 'finish' }
   maxRetries 3
   maxErrors '-1'
@@ -488,7 +488,7 @@ process FlagStatRealign {
   tag "$sampleID"
 
   cpus { 2 * task.attempt }
-  time { 4.h + (2 * task.attempt) }
+  time { 4.h + (2.h * task.attempt) }
   errorStrategy { task.exitStatus == 143 ? 'retry' : 'ignore' }
   maxRetries 3
   maxErrors '-1'
@@ -509,7 +509,7 @@ process CollectMetricsRealign {
   tag "$sampleID"
   
   cpus { 2 * task.attempt }
-  time { 4.h + (2 * task.attempt) }
+  time { 4.h + (2.h * task.attempt) }
   errorStrategy { task.exitStatus == 143 ? 'retry' : 'ignore' }
   maxRetries 3
   maxErrors '-1'
@@ -535,7 +535,7 @@ process CollectWgsMetrics {
   tag "$sampleID"
   
   cpus { 2 * task.attempt }
-  time { 4.h + (2 * task.attempt) }
+  time { 4.h + (2.h * task.attempt) }
   errorStrategy { task.exitStatus == 143 ? 'retry' : 'ignore' }
   maxRetries 3
   maxErrors '-1'
@@ -561,7 +561,7 @@ process CollectAlignmentSummaryMetrics {
   tag "$sampleID"
   
   cpus { 2 * task.attempt }
-  time { 4.h + (2 * task.attempt) }
+  time { 4.h + (2.h * task.attempt) }
   errorStrategy { task.exitStatus == 143 ? 'retry' : 'ignore' }
   maxRetries 3
   maxErrors '-1'
