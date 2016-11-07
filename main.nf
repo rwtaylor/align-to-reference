@@ -341,7 +341,8 @@ process CollectWgsMetrics {
   publishDir "outputs/wgs-metrics", mode: 'move'
   tag "${sampleID}-${libID}-${laneID}"
 
-  cpus { 2 * task.attempt }
+  cpus { task.attempt == 1 ? 8: 16 }
+  memory { task.attempt == 1 ? 32.GB: 64.GB }
   time { 4.h + (2.h * task.attempt) }
   errorStrategy { task.exitStatus == 143 ? 'retry' : 'ignore' }
   maxRetries 3
@@ -534,7 +535,8 @@ process CollectWgsMetrics {
   publishDir "outputs/wgs-metrics-realigned", mode: 'move'
   tag "$sampleID"
   
-  cpus { 2 * task.attempt }
+  cpus { task.attempt == 1 ? 8: 16 }
+  memory { task.attempt == 1 ? 32.GB: 64.GB }
   time { 4.h + (2.h * task.attempt) }
   errorStrategy { task.exitStatus == 143 ? 'retry' : 'ignore' }
   maxRetries 3
