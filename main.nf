@@ -96,7 +96,7 @@ if (params.subsample) {
 
 if (params.validate) {
   process FastQValidator {
-    publishDir "outputs/validate-fq", mode: 'copy'
+    publishDir "outputs/validate-fq", mode: 'move'
     tag "${sampleID}-${libID}-${laneID}"
 
     module "singularity"
@@ -138,7 +138,7 @@ if (params.validate) {
 
 
 process FastQC {
-  publishDir "outputs/fastqc"
+  publishDir "outputs/fastqc", mode: 'move'
   tag "${sampleID}-${libID}-${laneID}"
 
   cpus { 2 * task.attempt }
@@ -186,7 +186,7 @@ trimmedFastqs.into{ trimmedFastqs_mapping; trimmedFastqs_validate}
 
 if (params.validate) {
  process FastQValidatorTrimmed {
-   publishDir "outputs/validate-trimmed-fq", mode: 'copy'
+   publishDir "outputs/validate-trimmed-fq", mode: 'move'
    tag "${sampleID}-${libID}-${laneID}"
 
    module "singularity"
@@ -258,7 +258,7 @@ mappedBams.into { mappedBams_markduplicates; mappedBams_validate }
 
 if (params.validate) {
  process ValidateBam {
-   publishDir "outputs/validate-bams", mode: 'copy'
+   publishDir "outputs/validate-bams", mode: 'move'
    tag "${sampleID}-${libID}-${laneID}"
 
    cpus { 2 * task.attempt }
@@ -312,7 +312,7 @@ process MarkDuplicates {
 markduplicatesBams.into { markduplicatesBams; markduplicatesBams_index; markduplicatesBams_flagstat; markduplicatesBams_metrics; markduplicatesBams_wgsMetrics ; markduplicatesBams_validate }
 
 process CollectMetrics {
-  publishDir "outputs/picard-metrics"
+  publishDir "outputs/picard-metrics", mode: 'move'
   tag "${sampleID}-${libID}-${laneID}"
 
   cpus { 2 * task.attempt }
@@ -338,7 +338,7 @@ process CollectMetrics {
 }
 
 process CollectWgsMetrics {
-  publishDir "outputs/wgs-metrics"
+  publishDir "outputs/wgs-metrics", mode: 'move'
   tag "${sampleID}-${libID}-${laneID}"
 
   cpus { 2 * task.attempt }
@@ -365,7 +365,7 @@ process CollectWgsMetrics {
 
 
 process FlagStatMd {
-  publishDir "outputs/flagstat-md"
+  publishDir "outputs/flagstat-md", mode: 'move'
     tag "${sampleID}-${libID}-${laneID}"
 
   cpus { 2 * task.attempt }
@@ -449,7 +449,7 @@ mdbams_realignment = mdbams_realignment.phase(intervals) {it -> it[0]}
 mdbams_realignment = mdbams_realignment.map{a, b -> [a[0], a[1], a[2], a[3], a[4], b[1]]}
 
 process Realign {
-  publishDir "outputs/realigned-bams"
+  publishDir "outputs/realigned-bams", mode: 'copy'
   tag "$sampleID"
 
   memory { 32.GB + (8.GB * task.attempt) }
@@ -484,7 +484,7 @@ process Realign {
 realignedBams.into { realignedBams_flagstat; realignedBams_metrics; realignedBams_wgsMetrics; realignedBams_collectAlignment; realignedBams_preseq}
 
 process FlagStatRealign {
-  publishDir "outputs/flagstat-realigned"
+  publishDir "outputs/flagstat-realigned", mode: 'move'
   tag "$sampleID"
 
   cpus { 2 * task.attempt }
@@ -505,7 +505,7 @@ process FlagStatRealign {
 }
 
 process CollectMetricsRealign {
-  publishDir "outputs/picard-metrics-realigned"
+  publishDir "outputs/picard-metrics-realigned", mode: 'move'
   tag "$sampleID"
   
   cpus { 2 * task.attempt }
@@ -531,7 +531,7 @@ process CollectMetricsRealign {
 }
 
 process CollectWgsMetrics {
-  publishDir "outputs/wgs-metrics-realigned"
+  publishDir "outputs/wgs-metrics-realigned", mode: 'move'
   tag "$sampleID"
   
   cpus { 2 * task.attempt }
@@ -557,7 +557,7 @@ process CollectWgsMetrics {
 }
 
 process CollectAlignmentSummaryMetrics {
-  publishDir "outputs/allignmentsummary-realigned"
+  publishDir "outputs/allignmentsummary-realigned", mode: 'move'
   tag "$sampleID"
   
   cpus { 2 * task.attempt }
@@ -583,11 +583,11 @@ process CollectAlignmentSummaryMetrics {
 }
 
 process Preseq {
-  publishDir "outputs/preseq-realigned"
+  publishDir "outputs/preseq-realigned", mode: 'move'
   tag "$sampleID"
   
   cpus { 2 * task.attempt }
-  time { 6.h + (2 * task.attempt) }
+  time { 6.h + (2.h * task.attempt) }
   errorStrategy { task.exitStatus == 143 ? 'retry' : 'ignore' }
   maxRetries 3
   maxErrors '-1'
