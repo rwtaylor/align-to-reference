@@ -442,7 +442,7 @@ markduplicatesBamsBais = markduplicatesBamsBais.groupTuple(by:0)
 markduplicatesBamsBais.into {mdbams_interval; mdbams_realignment}
 
 process CreateIntervals {
-  publishDir "outputs/bam-intervals"
+  publishDir "outputs/stages/bam-intervals"
   tag "$sampleID"
 
   cpus 8
@@ -480,7 +480,7 @@ mdbams_realignment = mdbams_realignment.phase(intervals) {it -> it[0]}
 mdbams_realignment = mdbams_realignment.map{a, b -> [a[0], a[1], a[2], a[3], a[4], b[1]]}
 
 process Realign {
-  publishDir "outputs/realigned-bams", mode: 'copy'
+  publishDir "outputs/stages/realigned-bams", mode: 'copy'
   tag "$sampleID"
 
   memory { 32.GB + (8.GB * task.attempt) }
@@ -583,7 +583,7 @@ process RealignFlagStat {
   set sampleID, file(bam), file(bai) from realignedBams_flagstat
 
   output:
-  set sampleID, file("${sampleID}") into realign_flagstat
+  set sampleID, file("${sampleID}.txt") into realign_flagstat
 
   """
   samtools flagstat ${sampleID}.md.real.bam > ${sampleID}.txt
