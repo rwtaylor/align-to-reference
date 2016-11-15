@@ -96,7 +96,7 @@ if (params.subsample) {
 
 if (params.validate) {
   process FastQValidator {
-    publishDir "outputs/validate/validate-fq", mode: 'move'
+    publishDir "outputs/validate/validate-fq", mode: 'copy'
     tag "${sampleID}-${libID}-${laneID}"
 
     module "singularity"
@@ -138,7 +138,7 @@ if (params.validate) {
 
 
 process FastQC {
-  publishDir "outputs/qc/fastqc", mode: 'move'
+  publishDir "outputs/qc/fastqc", mode: 'copy'
   tag "${sampleID}-${libID}-${laneID}"
 
   cpus { 2 * task.attempt }
@@ -186,7 +186,7 @@ trimmedFastqs.into{ trimmedFastqs_mapping; trimmedFastqs_validate}
 
 if (params.validate) {
  process FastQValidatorTrimmed {
-   publishDir "outputs/validate/validate-trimmed-fq", mode: 'move'
+   publishDir "outputs/validate/validate-trimmed-fq", mode: 'copy'
    tag "${sampleID}-${libID}-${laneID}"
 
    module "singularity"
@@ -258,7 +258,7 @@ mappedBams.into { mappedBams_markduplicates; mappedBams_validate }
 
 if (params.validate) {
  process ValidateBam {
-   publishDir "outputs/validate/bams", mode: 'move'
+   publishDir "outputs/validate/bams", mode: 'copy'
    tag "${sampleID}-${libID}-${laneID}"
 
    cpus { 2 * task.attempt }
@@ -516,8 +516,8 @@ process Realign {
 realignedBams.into { realignedBams_flagstat; realignedBams_asMetrics; realignedBams_wgsMetrics; realignedBams_collectAlignment; realignedBams_preseq}
 
 
-process RealignCollectAlignmentSummaryMetrics {
-  publishDir "outputs/qc/realign-alignment-summary-metrics", mode: 'copy'
+process SampleCollectAlignmentSummaryMetrics {
+  publishDir "outputs/qc/sample-alignment-summary-metrics", mode: 'copy'
   tag "${sampleID}-${libID}-${laneID}"
 
   cpus { task.attempt == 1 ? 8: 16 }
@@ -531,7 +531,7 @@ process RealignCollectAlignmentSummaryMetrics {
   set sampleID, file(bam) from realignedBams_asMetrics
 
   output:
-  set sampleID, file("${sampleID}.txt") into realign_AsMetrics
+  set sampleID, file("${sampleID}.txt") into sample_AsMetrics
 
   """
   mkdir -p picard_tmp
@@ -543,8 +543,8 @@ process RealignCollectAlignmentSummaryMetrics {
   """
 }
 
-process RealignCollectWgsMetrics {
-  publishDir "outputs/qc/realign-wgs-metrics", mode: 'copy'
+process SampleCollectWgsMetrics {
+  publishDir "outputs/qc/sample-wgs-metrics", mode: 'copy'
   tag "${sampleID}-${libID}-${laneID}"
 
   cpus { task.attempt == 1 ? 8: 16 }
@@ -558,7 +558,7 @@ process RealignCollectWgsMetrics {
   set sampleID, file(bam) from realignedBams_wgsMetrics
 
   output:
-  set sampleID, file("${sampleID}.txt") into realign_WgsMetrics
+  set sampleID, file("${sampleID}.txt") into sample_WgsMetrics
 
   """
   mkdir -p picard_tmp
@@ -570,8 +570,8 @@ process RealignCollectWgsMetrics {
   """
 }
 
-process RealignFlagStat {
-  publishDir "outputs/qc/realign-flagstat", mode: 'copy'
+process SampleFlagStat {
+  publishDir "outputs/qc/sample-flagstat", mode: 'copy'
   tag "$sampleID"
 
   cpus { 2 * task.attempt }
@@ -584,15 +584,15 @@ process RealignFlagStat {
   set sampleID, file(bam), file(bai) from realignedBams_flagstat
 
   output:
-  set sampleID, file("${sampleID}.txt") into realign_flagstat
+  set sampleID, file("${sampleID}.txt") into sample_flagstat
 
   """
   samtools flagstat ${sampleID}.md.real.bam > ${sampleID}.txt
   """
 }
 
-process Preseq {
-  publishDir "outputs/qc/realigned-preseq", mode: 'copy'
+process SamplePreseq {
+  publishDir "outputs/qc/sample-preseq", mode: 'copy'
   tag "$sampleID"
   
   cpus { 2 * task.attempt }
@@ -605,7 +605,7 @@ process Preseq {
   set sampleID, file(bam), file(bai) from realignedBams_preseq
 
   output:
-  set sampleID, file("${sampleID}*") into preseq_realig
+  set sampleID, file("${sampleID}*") into sample_preseq
 
   """
   preseq c_curve -o ${sampleID}.c_curve -bam ${bam}
