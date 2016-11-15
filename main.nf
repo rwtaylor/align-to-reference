@@ -329,7 +329,7 @@ process LaneCollectInsertSizeMetrics {
   set sampleID, libID, laneID, file(bam) from markduplicatesBams_isMetrics
 
   output:
-  set sampleID, libID, laneID, file("${sampleID}_${libID}_${laneID}.txt") into lane_IsMetrics
+  set sampleID, libID, laneID, file("${sampleID}_${libID}_${laneID}.txt"), file("${sampleID}_${libID}_${laneID}.pdf") into lane_IsMetrics
 
   """
   mkdir -p picard_tmp
@@ -337,6 +337,7 @@ process LaneCollectInsertSizeMetrics {
     TMP_DIR=picard_tmp \
     R=${params.genomeFasta} \
     I=${bam} \
+    H=${sampleID}_${libID}_${laneID}.pdf \
     O=${sampleID}_${libID}_${laneID}.txt
   """
 }
