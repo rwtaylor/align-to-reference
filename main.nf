@@ -69,7 +69,7 @@ if (params.subsample) {
     memory { 4.GB * task.attempt }
     time { 1.h * task.attempt }
     errorStrategy { task.exitStatus == 143 ? 'retry' : 'finish' }
-    maxRetries 3
+    maxRetries 5
     maxErrors '-1'
 
     input:
@@ -104,7 +104,7 @@ if (params.validate) {
     cpus { 2 * task.attempt }
     time { 4.h + (2.h * task.attempt) }
     errorStrategy { task.exitStatus == 143 ? 'retry' : 'ignore' }
-    maxRetries 3
+    maxRetries 5
     maxErrors '-1'
 
     input:
@@ -144,7 +144,7 @@ process FastQC {
   cpus { 2 * task.attempt }
   time { 4.h + (2.h * task.attempt) }
   errorStrategy { task.exitStatus == 143 ? 'retry' : 'ignore' }
-  maxRetries 3
+  maxRetries 5
   maxErrors '-1'
 
   input:
@@ -167,7 +167,7 @@ process Trim_galore {
   memory { 16.GB * task.attempt }
   time { 12.h * task.attempt }
   errorStrategy { task.exitStatus == 143 ? 'retry' : 'finish' }
-  maxRetries 3
+  maxRetries 5
   maxErrors '-1'
 
   input:
@@ -178,6 +178,7 @@ process Trim_galore {
   file '*trimming_report.txt' into trimgalore_results
 
   """
+  source /scratch/PI/dpetrov/local/python/environments/py3/bin/activate
   trim_galore --paired --length 20 --gzip ${fq1} ${fq2} 
   """
 }
@@ -194,7 +195,7 @@ if (params.validate) {
    cpus { 2 * task.attempt }
    time { 4.h + (2.h * task.attempt) }
    errorStrategy { task.exitStatus == 143 ? 'retry' : 'ignore' }
-   maxRetries 3
+   maxRetries 5
    maxErrors '-1'
 
    input:
@@ -234,7 +235,7 @@ process Mapping {
   memory { 32.GB * task.attempt }
   time { 24.h + (6.h * task.attempt) }
   errorStrategy { task.exitStatus == 143 ? 'retry' : 'finish' }
-  maxRetries 3
+  maxRetries 5
   maxErrors '-1'
 
   input:
@@ -264,7 +265,7 @@ if (params.validate) {
    cpus { 2 * task.attempt }
    time { 4.h + (2.h * task.attempt) }
    errorStrategy { task.exitStatus == 143 ? 'retry' : 'ignore' }
-   maxRetries 3
+   maxRetries 5
    maxErrors '-1'
 
    input:
@@ -289,7 +290,7 @@ process MarkDuplicates {
   memory { 32.GB * task.attempt }
   time { 24.h + (6.h * task.attempt) }
   errorStrategy { task.exitStatus == 143 ? 'retry' : 'finish' }
-  maxRetries 3
+  maxRetries 5
   maxErrors '-1'
 
   input:
@@ -322,7 +323,7 @@ process LaneCollectInsertSizeMetrics {
   memory { task.attempt == 1 ? 32.GB: 64.GB }
   time { 4.h + (2.h * task.attempt) }
   errorStrategy { task.exitStatus == 143 ? 'retry' : 'ignore' }
-  maxRetries 3
+  maxRetries 5
   maxErrors '-1'
 
   input:
@@ -350,7 +351,7 @@ process LaneCollectAlignmentSummaryMetrics {
   memory { task.attempt == 1 ? 32.GB: 64.GB }
   time { 4.h + (2.h * task.attempt) }
   errorStrategy { task.exitStatus == 143 ? 'retry' : 'ignore' }
-  maxRetries 3
+  maxRetries 5
   maxErrors '-1'
 
   input:
@@ -377,7 +378,7 @@ process LaneCollectWgsMetrics {
   memory { task.attempt == 1 ? 32.GB: 64.GB }
   time { 4.h + (2.h * task.attempt) }
   errorStrategy { task.exitStatus == 143 ? 'retry' : 'ignore' }
-  maxRetries 3
+  maxRetries 5
   maxErrors '-1'
 
   input:
@@ -403,7 +404,7 @@ process LaneFlagStat {
   cpus { 2 * task.attempt }
   time { 4.h + (2.h * task.attempt) }
   errorStrategy { task.exitStatus == 143 ? 'retry' : 'ignore' }
-  maxRetries 3
+  maxRetries 5
   maxErrors '-1'
   
   input:
@@ -424,7 +425,7 @@ process IndexBams {
   memory { 8.GB  + (4.GB * task.attempt) }
   time { 4.h + (2.h * task.attempt) }
   errorStrategy { task.exitStatus == 143 ? 'retry' : 'finish' }
-  maxRetries 3
+  maxRetries 5
   maxErrors '-1'
 
   input:
@@ -450,7 +451,7 @@ process CreateIntervals {
   memory { 32.GB + (8.GB * task.attempt) }
   time { 12.h * task.attempt }
   errorStrategy { task.exitStatus == 143 ? 'retry' : 'finish' }
-  maxRetries 3
+  maxRetries 5
   maxErrors '-1'
 
   input:
@@ -487,7 +488,7 @@ process Realign {
   memory { 32.GB + (8.GB * task.attempt) }
   time { 12.h * task.attempt }
   errorStrategy { task.exitStatus == 143 ? 'retry' : 'finish' }
-  maxRetries 3
+  maxRetries 5
   maxErrors '-1'
 
   input:
@@ -524,7 +525,7 @@ process SampleCollectAlignmentSummaryMetrics {
   memory { task.attempt == 1 ? 32.GB: 64.GB }
   time { 4.h + (2.h * task.attempt) }
   errorStrategy { task.exitStatus == 143 ? 'retry' : 'ignore' }
-  maxRetries 3
+  maxRetries 5
   maxErrors '-1'
 
   input:
@@ -551,7 +552,7 @@ process SampleCollectWgsMetrics {
   memory { task.attempt == 1 ? 32.GB: 64.GB }
   time { 4.h + (2.h * task.attempt) }
   errorStrategy { task.exitStatus == 143 ? 'retry' : 'ignore' }
-  maxRetries 3
+  maxRetries 5
   maxErrors '-1'
 
   input:
@@ -577,7 +578,7 @@ process SampleFlagStat {
   cpus { 2 * task.attempt }
   time { 4.h + (2.h * task.attempt) }
   errorStrategy { task.exitStatus == 143 ? 'retry' : 'ignore' }
-  maxRetries 3
+  maxRetries 5
   maxErrors '-1'
 
   input:
@@ -598,7 +599,7 @@ process SamplePreseq {
   cpus { 2 * task.attempt }
   time { 6.h + (2.h * task.attempt) }
   errorStrategy { task.exitStatus == 143 ? 'retry' : 'ignore' }
-  maxRetries 3
+  maxRetries 5
   maxErrors '-1'
   
   input:
