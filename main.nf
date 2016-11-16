@@ -178,7 +178,6 @@ process Trim_galore {
   file '*trimming_report.txt' into trimgalore_results
 
   """
-  source /scratch/PI/dpetrov/local/python/environments/py3/bin/activate
   trim_galore --paired --length 20 --gzip ${fq1} ${fq2} 
   """
 }
