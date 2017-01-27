@@ -59,7 +59,7 @@ fastqFiles = fastqFiles.view()
 // To run:
 // $ nextflow run preprocessing.nf -c <nextflow.config> --sample <samples.tsv> --subsample
 
-if (nvl(params.subsample, false)) {
+if (params.subsample) {
 
   process MakeSmallTestData {
 
