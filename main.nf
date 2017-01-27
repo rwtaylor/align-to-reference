@@ -11,8 +11,8 @@
   
   samples.tsv
   -----
-  format: "sample lane directory fastq1 fastq2"
-  example: PT001 001 ../fastq-data PT001_TTCGGTG_L001_R1_001.fastq.gz PT001_TTCGGTG_L001_R2_001.fastq.gz
+  format: "sample library lane directory fastq1 fastq2"
+  example: PT001 ng1 001 ../fastq-data PT001_TTCGGTG_L001_R1_001.fastq.gz PT001_TTCGGTG_L001_R2_001.fastq.gz
 
   NOTE: FreeBayes requires each read group to be unique. Or at least,
         that read groups are not shared between samples. Read group IDs
@@ -274,7 +274,7 @@ if (params.validate) {
    file("*.bam.validate") into validated_mapped_bams
 
    """
-   java -jar ${params.picardDir}/picard.jar ValidateSamFile \
+   java -jar ${params.picardJar} ValidateSamFile \
      I=${sampleID}_${libID}_${laneID}.sorted.bam > ${sampleID}_${libID}_${laneID}.bam.validate
 
    """
@@ -301,7 +301,7 @@ process MarkDuplicates {
 
   """
   mkdir -p picard_tmp
-  java -jar ${params.picardDir}/picard.jar MarkDuplicates \
+  java -jar ${params.picardJar} MarkDuplicates \
     TMP_DIR=picard_tmp \
     I=${bam} \
     O=${sampleID}_${libID}_${laneID}.md.bam \
@@ -333,7 +333,7 @@ process LaneCollectInsertSizeMetrics {
 
   """
   mkdir -p picard_tmp
-  java -jar ${params.picardDir}/picard.jar CollectInsertSizeMetrics \
+  java -jar ${params.picardJar} CollectInsertSizeMetrics \
     TMP_DIR=picard_tmp \
     R=${params.genomeFasta} \
     I=${bam} \
@@ -361,7 +361,7 @@ process LaneCollectAlignmentSummaryMetrics {
 
   """
   mkdir -p picard_tmp
-  java -jar ${params.picardDir}/picard.jar CollectAlignmentSummaryMetrics \
+  java -jar ${params.picardJar} CollectAlignmentSummaryMetrics \
     TMP_DIR=picard_tmp \
     R=${params.genomeFasta} \
     I=${bam} \
@@ -388,7 +388,7 @@ process LaneCollectWgsMetrics {
 
   """
   mkdir -p picard_tmp
-  java -jar ${params.picardDir}/picard.jar CollectWgsMetrics \
+  java -jar ${params.picardJar} CollectWgsMetrics \
     TMP_DIR=picard_tmp \
     R=${params.genomeFasta} \
     I=${bam} \
@@ -466,7 +466,7 @@ process CreateIntervals {
   input = bams.collect{"-I $it"}.join(' ')
 
   """
-  java -Xmx${task.memory.toGiga()}g -jar ${params.gatkDir}/GenomeAnalysisTK.jar \
+  java -Xmx${task.memory.toGiga()}g -jar ${params.gatkJar} \
   -T RealignerTargetCreator \
   $input \
   -R $gf \
@@ -503,7 +503,7 @@ process Realign {
   input = bams.collect{"-I $it"}.join(' ')
 
   """
-  java -Xmx${task.memory.toGiga()}g -jar ${params.gatkDir}/GenomeAnalysisTK.jar \
+  java -Xmx${task.memory.toGiga()}g -jar ${params.gatkJar} \
   -T IndelRealigner \
   $input \
   -R $gf \
@@ -535,7 +535,7 @@ process SampleCollectAlignmentSummaryMetrics {
 
   """
   mkdir -p picard_tmp
-  java -jar ${params.picardDir}/picard.jar CollectAlignmentSummaryMetrics \
+  java -jar ${params.picardJar} CollectAlignmentSummaryMetrics \
     TMP_DIR=picard_tmp \
     R=${params.genomeFasta} \
     I=${bam} \
@@ -562,7 +562,7 @@ process SampleCollectWgsMetrics {
 
   """
   mkdir -p picard_tmp
-  java -jar ${params.picardDir}/picard.jar CollectWgsMetrics \
+  java -jar ${params.picardJar} CollectWgsMetrics \
     TMP_DIR=picard_tmp \
     R=${params.genomeFasta} \
     I=${bam} \
