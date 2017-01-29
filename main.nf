@@ -73,14 +73,14 @@ if (params.subsample) {
     maxErrors '-1'
 
     input:
-    set sampleID, libID, laneID, file(fqs), file(fq2) from fastqFiles
+    set sampleID, libID, laneID, file(fq1), file(fq2) from fastqFiles
 
     output:
     set sampleID, libID, laneID, file("${sampleID}_${libID}_${laneID}.small.1.fq"), file("${sampleID}_${libID}_${laneID}.small.2.fq") into fastqFilesSmall
 
     """
-    seqtk sample -s100 ${fq1} 10000 > ${sampleID}_${libID}_${laneID}.small.1.fq
-    seqtk sample -s100 ${fq2} 10000 > ${sampleID}_${libID}_${laneID}.small.2.fq
+    seqtk sample -s100 ${fq1} 100000 > ${sampleID}_${libID}_${laneID}.small.1.fq
+    seqtk sample -s100 ${fq2} 100000 > ${sampleID}_${libID}_${laneID}.small.2.fq
 
     """
   }
@@ -297,7 +297,7 @@ process MarkDuplicates {
 
   output:
   set sampleID, libID, laneID, file("*.md.bam") into markduplicatesBams
-  set file("*.markduplicates.txt") into markduplicatesResults
+  set sampleID, libID, laneID, file("*.markduplicates.txt") into markduplicatesResults
 
   """
   mkdir -p picard_tmp
@@ -329,7 +329,7 @@ process LaneCollectInsertSizeMetrics {
   set sampleID, libID, laneID, file(bam) from markduplicatesBams_isMetrics
 
   output:
-  set sampleID, libID, laneID, file("${sampleID}_${libID}_${laneID}.txt"), file("${sampleID}_${libID}_${laneID}.pdf") into lane_IsMetrics
+  file("${sampleID}_${libID}_${laneID}.txt") into lane_IsMetrics
 
   """
   mkdir -p picard_tmp
@@ -357,7 +357,7 @@ process LaneCollectAlignmentSummaryMetrics {
   set sampleID, libID, laneID, file(bam) from markduplicatesBams_asMetrics
 
   output:
-  set sampleID, libID, laneID, file("${sampleID}_${libID}_${laneID}.txt") into lane_AsMetrics_lane
+  file("${sampleID}_${libID}_${laneID}.txt") into lane_AsMetrics_lane
 
   """
   mkdir -p picard_tmp
@@ -384,7 +384,7 @@ process LaneCollectWgsMetrics {
   set sampleID, libID, laneID, file(bam) from markduplicatesBams_wgsMetrics
 
   output:
-  set sampleID, libID, laneID, file("${sampleID}_${libID}_${laneID}.txt") into lane_WgsMetrics
+  file("${sampleID}_${libID}_${laneID}.txt") into lane_WgsMetrics
 
   """
   mkdir -p picard_tmp
@@ -410,7 +410,7 @@ process LaneFlagStat {
   set sampleID, libID, laneID, file(bam) from markduplicatesBams_flagstat
 
   output:
-  set sampleID, libID, laneID, file("${sampleID}_${libID}_${laneID}.txt") into lane_flagstat
+  file("${sampleID}_${libID}_${laneID}.txt") into lane_flagstat
 
   """
   samtools flagstat ${sampleID}_${libID}_${laneID}.md.bam > ${sampleID}_${libID}_${laneID}.txt
@@ -481,7 +481,7 @@ mdbams_realignment = mdbams_realignment.phase(intervals) {it -> it[0]}
 mdbams_realignment = mdbams_realignment.map{a, b -> [a[0], a[1], a[2], a[3], a[4], b[1]]}
 
 process Realign {
-  publishDir "outputs/stages/realigned-bams", mode: 'copy'
+  publishDir "outputs/aligned-bams", mode: 'copy'
   tag "$sampleID"
 
   memory { 32.GB + (8.GB * task.attempt) }
@@ -531,7 +531,7 @@ process SampleCollectAlignmentSummaryMetrics {
   set sampleID, file(bam) from realignedBams_asMetrics
 
   output:
-  set sampleID, file("${sampleID}.txt") into sample_AsMetrics
+  file("${sampleID}.txt") into sample_AsMetrics
 
   """
   mkdir -p picard_tmp
@@ -558,7 +558,7 @@ process SampleCollectWgsMetrics {
   set sampleID, file(bam) from realignedBams_wgsMetrics
 
   output:
-  set sampleID, file("${sampleID}.txt") into sample_WgsMetrics
+  file("${sampleID}.txt") into sample_WgsMetrics
 
   """
   mkdir -p picard_tmp
@@ -584,7 +584,7 @@ process SampleFlagStat {
   set sampleID, file(bam), file(bai) from realignedBams_flagstat
 
   output:
-  set sampleID, file("${sampleID}.txt") into sample_flagstat
+  file("${sampleID}.txt") into sample_flagstat
 
   """
   samtools flagstat ${sampleID}.md.real.bam > ${sampleID}.txt
@@ -605,13 +605,60 @@ process SamplePreseq {
   set sampleID, file(bam), file(bai) from realignedBams_preseq
 
   output:
-  set sampleID, file("${sampleID}*") into sample_preseq
+  file("${sampleID}*") into sample_preseq
 
   """
   preseq c_curve -o ${sampleID}.c_curve -bam ${bam}
   preseq lc_extrap -o ${sampleID}.lc_extrap -bam ${bam}
   """
 }
+
+
+laneqc_files = lane_IsMetrics.mix(lane_AsMetrics_lane, lane_WgsMetrics, lane_flagstat).toList()
+sampleqc_files = sample_AsMetrics.mix(sample_WgsMetrics, sample_flagstat, sample_preseq).toList()
+
+process LaneMultiQC {
+
+  publishDir "outputs", mode: 'copy'
+  
+  cpus { 2 * task.attempt }
+  time { 6.h + (2.h * task.attempt) }
+  errorStrategy { task.exitStatus == 143 ? 'retry' : 'ignore' }
+  maxRetries 5
+  maxErrors '-1'
+  
+  input:
+  file(laneqc_files) from laneqc_files
+
+  output:
+  file(laneqc) into laneqc_output
+
+  """
+  multiqc -f -o laneqc .
+  """
+}
+
+process SampleMultiQC {
+
+  publishDir "outputs", mode: 'copy'
+  
+  cpus { 2 * task.attempt }
+  time { 6.h + (2.h * task.attempt) }
+  errorStrategy { task.exitStatus == 143 ? 'retry' : 'ignore' }
+  maxRetries 5
+  maxErrors '-1'
+  
+  input:
+  file(sampleqc_files) from sampleqc_files
+
+  output:
+  file(sampleqc) into sampleqc_output
+
+  """
+  multiqc -f -o sampleqc .
+  """
+}
+
 
 workflow.onComplete {
     println "Pipeline completed at: $workflow.complete"
