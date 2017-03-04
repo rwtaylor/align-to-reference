@@ -94,7 +94,8 @@ process FastQC {
   publishDir "outputs/qc/fastqc", mode: 'copy'
   tag "${sampleID}-${libID}-${laneID}"
 
-  cpus { 2 * task.attempt }
+  cpus { 1 * task.attempt }
+  memory { 4.GB }
   time { 4.h + (2.h * task.attempt) }
   errorStrategy { task.exitStatus == 143 ? 'retry' : 'ignore' }
   maxRetries 5
@@ -107,7 +108,7 @@ process FastQC {
   file '*_fastqc.{zip,html}' into fastqc_results
 
   """
-  fastqc -q ${fq1} ${fq2}
+  /usr/local/bin/fastqc -q ${fq1} ${fq2}
   """
 }
 
@@ -115,8 +116,8 @@ process Trim_galore {
   publishDir "outputs/stages/trimmed-fastqs"
   tag "${sampleID}-${libID}-${laneID}"
 
-  cpus 4
-  memory { 16.GB * task.attempt }
+  cpus 2
+  memory { 8.GB }
   time { 12.h * task.attempt }
   errorStrategy { task.exitStatus == 143 ? 'retry' : 'finish' }
   maxRetries 5
@@ -128,9 +129,10 @@ process Trim_galore {
   output:
   set sampleID, libID, laneID, file("*_val_1.fq.gz"), file("*_val_2.fq.gz") into trimmedFastqs
   file '*trimming_report.txt' into trimgalore_results
+  file '*_fastqc.{zip,html}' into fastqc_results_after_trimming
 
   """
-  trim_galore --paired --length 20 --gzip ${fq1} ${fq2} 
+  /usr/local/bin/trim_galore --paired --length 20 --gzip --fastqc ${fq1} ${fq2} 
   """
 }
 
@@ -158,8 +160,8 @@ process Mapping {
   readGroupString="\"@RG\\tID:${sampleID}_${libID}_${laneID}\\tSM:${sampleID}\\tLB:${sampleID}_${libID}\\tPL:illumina\""
 
   """
-  bwa mem -R ${readGroupString} -B 3 -t ${task.cpus} ${params.genomeFasta} ${fq1} ${fq2} | \
-  samtools view -hu - | samtools sort -O bam - > ${sampleID}_${libID}_${laneID}.bam
+  /usr/local/bin/bwa mem -R ${readGroupString} -B 3 -t ${task.cpus} ${params.genomeFasta} ${fq1} ${fq2} | \
+  /usr/local/bin/samtools view -hu - | /usr/local/bin/samtools sort -O bam - > ${sampleID}_${libID}_${laneID}.bam
 
   """
 }
@@ -186,7 +188,7 @@ process MarkDuplicates_lane {
 
   """
   mkdir -p picard_tmp
-  java -jar /usr/local/opt/picard.jar MarkDuplicates \
+  /usr/bin/java -jar /usr/local/opt/picard.jar MarkDuplicates \
     TMP_DIR=picard_tmp \
     I=${bam} \
     O=${sampleID}_${libID}_${laneID}.md.bam \
@@ -230,7 +232,7 @@ process MarkDuplicates_samples {
 
   """
   mkdir -p picard_tmp
-  java -jar /usr/local/opt/picard.jar MarkDuplicates \
+  /usr/bin/java -jar /usr/local/opt/picard.jar MarkDuplicates \
     TMP_DIR=picard_tmp \
     $input \
     O=${sampleID}.md.bam \
@@ -274,7 +276,7 @@ process LaneCollectInsertSizeMetrics {
 
   """
   mkdir -p picard_tmp
-  java -jar /usr/local/opt/picard.jar CollectInsertSizeMetrics \
+  /usr/bin/java -jar /usr/local/opt/picard.jar CollectInsertSizeMetrics \
     TMP_DIR=picard_tmp \
     R=${gf} \
     I=${bam} \
@@ -305,7 +307,7 @@ process LaneCollectAlignmentSummaryMetrics {
 
   """
   mkdir -p picard_tmp
-  java -jar /usr/local/opt/picard.jar CollectAlignmentSummaryMetrics \
+  /usr/bin/java -jar /usr/local/opt/picard.jar CollectAlignmentSummaryMetrics \
     TMP_DIR=picard_tmp \
     R=${gf} \
     I=${bam} \
@@ -335,7 +337,7 @@ process LaneCollectWgsMetrics {
 
   """
   mkdir -p picard_tmp
-  java -jar /usr/local/opt/picard.jar CollectWgsMetrics \
+  /usr/bin/java -jar /usr/local/opt/picard.jar CollectWgsMetrics \
     TMP_DIR=picard_tmp \
     R=${gf} \
     I=${bam} \
@@ -387,7 +389,7 @@ process SampleCollectAlignmentSummaryMetrics {
 
   """
   mkdir -p picard_tmp
-  java -jar /usr/local/opt/picard.jar CollectAlignmentSummaryMetrics \
+  /usr/bin/java -jar /usr/local/opt/picard.jar CollectAlignmentSummaryMetrics \
     TMP_DIR=picard_tmp \
     R=${gf} \
     I=${bam} \
@@ -417,7 +419,7 @@ process SampleCollectWgsMetrics {
 
   """
   mkdir -p picard_tmp
-  java -jar /usr/local/opt/picard.jar CollectWgsMetrics \
+  /usr/bin/java -jar /usr/local/opt/picard.jar CollectWgsMetrics \
     TMP_DIR=picard_tmp \
     R=${gf} \
     I=${bam} \
@@ -463,8 +465,8 @@ process SamplePreseq {
   file("${sampleID}*") into sample_preseq
 
   """
-  preseq c_curve -o ${sampleID}.c_curve -bam ${bam}
-  preseq lc_extrap -o ${sampleID}.lc_extrap -bam ${bam}
+  /usr/local/bin/preseq c_curve -o ${sampleID}.c_curve -bam ${bam}
+  /usr/local/bin/preseq lc_extrap -o ${sampleID}.lc_extrap -bam ${bam}
   """
 }
 
@@ -488,7 +490,7 @@ process LaneMultiQC {
   file(laneqc) into laneqc_output
 
   """
-  multiqc -f -o laneqc .
+  /usr/local/bin/multiqc -f -o laneqc .
   """
 }
 
@@ -509,7 +511,7 @@ process SampleMultiQC {
   file(sampleqc) into sampleqc_output
 
   """
-  multiqc -f -o sampleqc .
+  /usr/local/bin/multiqc -f -o sampleqc .
   """
 }
 

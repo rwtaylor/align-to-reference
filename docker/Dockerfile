@@ -71,6 +71,14 @@ RUN cd /usr/local/src && \
 #RUN apt-get install -y pkg-config libfreetype6-dev libpng-dev
 RUN pip install multiqc
 
-
 RUN echo "deb http://ftp.debian.org/debian testing main" >> /etc/apt/sources.list && \
     apt-get update -y && apt-get install -y openjdk-8-jre
+
+# Bind points for singularity
+RUN mkdir -p /dev && \
+    mkdir -p /tmp && \
+    mkdir -p /var/tmp && \
+    mkdir -p /home && \
+    mkdir -p /scratch && \
+    mkdir -p /local-scratch \
+    mkdir -p /zstor
