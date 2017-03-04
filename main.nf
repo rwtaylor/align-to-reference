@@ -52,9 +52,6 @@ fastqFiles = Channel
     [ sampleID, libID, laneID, fastqFile1, fastqFile2 ]
 }
 
-fastqFiles = fastqFiles.view()
-
-
 // Subsampling for testing
 // To run:
 // $ nextflow run preprocessing.nf -c <nextflow.config> --sample <samples.tsv> --subsample
@@ -85,7 +82,6 @@ if (params.subsample) {
     """
   }
 
-  fastqFilesSmall = fastqFilesSmall.view()
   fastqFilesSmall.into { fastqFiles_fastqc; fastqFiles_fastqvalidator; fastqFiles_trimgalore }
 
 } else {
@@ -93,49 +89,6 @@ if (params.subsample) {
   fastqFiles.into { fastqFiles_fastqc; fastqFiles_fastqvalidator; fastqFiles_trimgalore }
 
 }
-
-if (params.validate) {
-  process FastQValidator {
-    publishDir "outputs/validate/validate-fq", mode: 'copy'
-    tag "${sampleID}-${libID}-${laneID}"
-
-    module "singularity"
-
-    cpus { 2 * task.attempt }
-    time { 4.h + (2.h * task.attempt) }
-    errorStrategy { task.exitStatus == 143 ? 'retry' : 'ignore' }
-    maxRetries 5
-    maxErrors '-1'
-
-    input:
-    set idSample, idLane, file(fq1), file(fq2) from fastqFiles_fastqvalidator
-
-    output:
-    file '*.sanity.txt' into validated_fastqs
-
-    """
-    echo "# # # # # # # # # # # # # # # # # # # # # # # # # # # # # #" > ${idSample}_${idLane}.sanity.txt
-    echo "FastQValidator and biawk Sanity Check" > ${idSample}_${idLane}.sanity.txt
-    echo "- - - - - - - - - - - - - - - - - - - - - - - - - - - - - -" >> ${idSample}_${idLane}.sanity.txt
-    echo "FastQValidator results for ${fq1}" >> ${idSample}_${idLane}.sanity.txt
-    singularity exec /scratch/PI/dpetrov/containers/singularity/bioinformatics.img fastQValidator --file ${fq1}  >> ${idSample}_${idLane}.sanity.txt
-    echo "- - - - - - - - - - - - - - - - - - - - - - - - - - - - - -" >> ${idSample}_${idLane}.sanity.txt
-    echo "FastQValidator results for ${fq2}" >> ${idSample}_${idLane}.sanity.txt
-    singularity exec /scratch/PI/dpetrov/containers/singularity/bioinformatics.img fastQValidator --file ${fq2} >> ${idSample}_${idLane}.sanity.txt
-
-    echo "# # # # # # # # # # # # # # # # # # # # # # # # # # # # # #" >> ${idSample}_${idLane}.sanity.txt
-    echo “Check if length of sequence equals quality score length”  >> ${idSample}_${idLane}.sanity.txt
-    echo "- - - - - - - - - - - - - - - - - - - - - - - - - - - - - -" >> ${idSample}_${idLane}.sanity.txt
-    echo "Check results for ${fq1}" >> ${idSample}_${idLane}.sanity.txt
-    zcat ${fq1} | bioawk -c fastx '{if (length(\$seq)!=length(\$qual)) print "Offending: " NR}' >> ${idSample}_${idLane}.sanity.txt
-    echo "- - - - - - - - - - - - - - - - - - - - - - - - - - - - - -" >> ${idSample}_${idLane}.sanity.txt
-    echo "Check results for ${fq2}" >> ${idSample}_${idLane}.sanity.txt
-    zcat ${fq2} | bioawk -c fastx '{if (length(\$seq)!=length(\$qual)) print "Offending: " NR}' >> ${idSample}_${idLane}.sanity.txt
-
-     """
-  }
-}
-
 
 process FastQC {
   publishDir "outputs/qc/fastqc", mode: 'copy'
@@ -154,7 +107,6 @@ process FastQC {
   file '*_fastqc.{zip,html}' into fastqc_results
 
   """
-  source /scratch/PI/dpetrov/local/set_environment.sh
   fastqc -q ${fq1} ${fq2}
   """
 }
@@ -183,48 +135,6 @@ process Trim_galore {
 }
 
 trimmedFastqs.into{ trimmedFastqs_mapping; trimmedFastqs_validate}
-
-if (params.validate) {
- process FastQValidatorTrimmed {
-   publishDir "outputs/validate/validate-trimmed-fq", mode: 'copy'
-   tag "${sampleID}-${libID}-${laneID}"
-
-   module "singularity"
-
-   cpus { 2 * task.attempt }
-   time { 4.h + (2.h * task.attempt) }
-   errorStrategy { task.exitStatus == 143 ? 'retry' : 'ignore' }
-   maxRetries 5
-   maxErrors '-1'
-
-   input:
-   set idSample, idLane, file(fq1), file(fq2) from trimmedFastqs_validate
-
-   output:
-   file '*.sanity.txt' into validated_trimmedfastqs
-
-   """
-   echo "# # # # # # # # # # # # # # # # # # # # # # # # # # # # # #" > ${idSample}_${idLib}_${idLane}.sanity.txt
-   echo "FastQValidator and biawk Sanity Check" > ${idSample}_${idLib}_${idLane}.sanity.txt
-   echo "- - - - - - - - - - - - - - - - - - - - - - - - - - - - - -" >> ${idSample}_${idLib}_${idLane}.sanity.txt
-   echo "FastQValidator results for ${fq1}" >> ${idSample}_${idLib}_${idLane}.sanity.txt
-   singularity exec /scratch/PI/dpetrov/containers/singularity/bioinformatics.img fastQValidator --file ${fq1}  >> ${idSample}_${idLib}_${idLane}.sanity.txt
-   echo "- - - - - - - - - - - - - - - - - - - - - - - - - - - - - -" >> ${idSample}_${idLib}_${idLane}.sanity.txt
-   echo "FastQValidator results for ${fq2}" >> ${idSample}_${idLib}_${idLane}.sanity.txt
-   singularity exec /scratch/PI/dpetrov/containers/singularity/bioinformatics.img fastQValidator --file ${fq2} >> ${idSample}_${idLib}_${idLane}.sanity.txt
-
-   echo "# # # # # # # # # # # # # # # # # # # # # # # # # # # # # #" >> ${idSample}_${idLib}_${idLane}.sanity.txt
-   echo “Check if length of sequence equals quality score length”  >> ${idSample}_${idLib}_${idLane}.sanity.txt
-   echo "- - - - - - - - - - - - - - - - - - - - - - - - - - - - - -" >> ${idSample}_${idLib}_${idLane}.sanity.txt
-   echo "Check results for ${fq1}" >> ${idSample}_${idLib}_${idLane}.sanity.txt
-   zcat ${fq1} | bioawk -c fastx '{if (length(\$seq)!=length(\$qual)) print "Offending: " NR}' >> ${idSample}_${idLib}_${idLane}.sanity.txt
-   echo "- - - - - - - - - - - - - - - - - - - - - - - - - - - - - -" >> ${idSample}_${idLib}_${idLane}.sanity.txt
-   echo "Check results for ${fq2}" >> ${idSample}_${idLib}_${idLane}.sanity.txt
-   zcat ${fq2} | bioawk -c fastx '{if (length(\$seq)!=length(\$qual)) print "Offending: " NR}' >> ${idSample}_${idLib}_${idLane}.sanity.txt
-
-   """
- }
-}
 
 process Mapping {
   publishDir "outputs/stages/mapped-bams"
@@ -256,37 +166,12 @@ process Mapping {
 
 mappedBams.into { mappedBams_markduplicates; mappedBams_validate }
 
-if (params.validate) {
- process ValidateBam {
-   publishDir "outputs/validate/bams", mode: 'copy'
-   tag "${sampleID}-${libID}-${laneID}"
-
-   cpus { 2 * task.attempt }
-   time { 4.h + (2.h * task.attempt) }
-   errorStrategy { task.exitStatus == 143 ? 'retry' : 'ignore' }
-   maxRetries 5
-   maxErrors '-1'
-
-   input:
-   set idSample, idLane, file(bam) from mappedBams_validate
-
-   output:
-   file("*.bam.validate") into validated_mapped_bams
-
-   """
-   java -jar ${params.picardJar} ValidateSamFile \
-     I=${sampleID}_${libID}_${laneID}.sorted.bam > ${sampleID}_${libID}_${laneID}.bam.validate
-
-   """
- }
-}
-
-process MarkDuplicates {
-  publishDir "outputs/stages/marked-duplicates-bams"
+process MarkDuplicates_lane {
+  publishDir "outputs/stages/marked-duplicates-bams-lane"
     tag "${sampleID}-${libID}-${laneID}"
 
-  cpus 8
-  memory { 32.GB * task.attempt }
+  cpus { task.attempt == 1 ? 8: 16 }
+  memory { task.attempt == 1 ? 32.GB: 64.GB }
   time { 24.h + (6.h * task.attempt) }
   errorStrategy { task.exitStatus == 143 ? 'retry' : 'finish' }
   maxRetries 5
@@ -296,22 +181,75 @@ process MarkDuplicates {
   set sampleID, libID, laneID, file(bam) from mappedBams_markduplicates
 
   output:
-  set sampleID, libID, laneID, file("*.md.bam") into markduplicatesBams
-  set sampleID, libID, laneID, file("*.markduplicates.txt") into markduplicatesResults
+  set sampleID, libID, laneID, file("*.md.bam"), file("*.md.bai") into markduplicatesBams
+  set sampleID, libID, laneID, file("*.markduplicates.lane.txt") into markduplicatesResults
 
   """
   mkdir -p picard_tmp
-  java -jar ${params.picardJar} MarkDuplicates \
+  java -jar /usr/local/opt/picard.jar MarkDuplicates \
     TMP_DIR=picard_tmp \
     I=${bam} \
     O=${sampleID}_${libID}_${laneID}.md.bam \
-    M=${sampleID}_${libID}_${laneID}.markduplicates.txt
+    M=${sampleID}_${libID}_${laneID}.markduplicates.lane.txt \
+    OPTICAL_DUPLICATE_PIXEL_DISTANCE=2500 \
+    CREATE_INDEX=true
   """
 }
 
 markduplicatesBams.into { markduplicatesBams; markduplicatesBams_index; markduplicatesBams_flagstat; markduplicatesBams_asMetrics; markduplicatesBams_isMetrics; markduplicatesBams_wgsMetrics ; markduplicatesBams_validate }
 
+//  set sampleID, libID, laneID, file(bam), file("*.md.bai") into markduplicatesBams
 
+markduplicatesBams_samples = markduplicatesBams.groupTuple(by:0)
+
+// Combine bams with intervals
+
+process MarkDuplicates_samples {
+  publishDir "outputs/stages/marked-duplicates-bams-sample"
+  tag "$sampleID"
+
+  cpus { task.attempt == 1 ? 8: 16 }
+  memory { task.attempt == 1 ? 32.GB: 64.GB }
+  time { 12.h * task.attempt }
+  errorStrategy { task.exitStatus == 143 ? 'retry' : 'finish' }
+  maxRetries 5
+  maxErrors '-1'
+
+  input:
+  set sampleID, libID, laneID, file(bams), file(bais) from markduplicatesBams_samples
+  file gf from file(params.genomeFasta)
+  file gi from file(params.genomeIndex)
+  file gd from file(params.genomeDict)
+
+  output:
+  set sampleID, file("*.md.bam"), file("*.md.bai") into sampleBams
+  set sampleID, file("*.markduplicates.samples.txt") into markduplicatesResults_samples
+
+  script:
+  input = bams.collect{"I=$it"}.join(' ')
+
+  """
+  mkdir -p picard_tmp
+  java -jar /usr/local/opt/picard.jar MarkDuplicates \
+    TMP_DIR=picard_tmp \
+    $input \
+    O=${sampleID}.md.bam \
+    M=${sampleID}.markduplicates.samples.txt \
+    OPTICAL_DUPLICATE_PIXEL_DISTANCE=${params.optical_duplicate_pixel_distance} \
+    CREATE_INDEX=true
+  """
+}
+
+sampleBams.into { sampleBams_flagstat; sampleBams_asMetrics; sampleBams_wgsMetrics; sampleBams_collectAlignment; sampleBams_preseq}
+
+//
+//
+//
+// ALIGNMENT METRICS ETC
+// aligment is done, the rest is calculating metrics...
+//
+//
+//
 // LANE Metrics
 
 process LaneCollectInsertSizeMetrics {
@@ -327,15 +265,18 @@ process LaneCollectInsertSizeMetrics {
 
   input:
   set sampleID, libID, laneID, file(bam) from markduplicatesBams_isMetrics
+  file gf from file(params.genomeFasta)
+  file gi from file(params.genomeIndex)
+  file gd from file(params.genomeDict)
 
   output:
   file("${sampleID}_${libID}_${laneID}.txt") into lane_IsMetrics
 
   """
   mkdir -p picard_tmp
-  java -jar ${params.picardJar} CollectInsertSizeMetrics \
+  java -jar /usr/local/opt/picard.jar CollectInsertSizeMetrics \
     TMP_DIR=picard_tmp \
-    R=${params.genomeFasta} \
+    R=${gf} \
     I=${bam} \
     H=${sampleID}_${libID}_${laneID}.pdf \
     O=${sampleID}_${libID}_${laneID}.txt
@@ -355,15 +296,18 @@ process LaneCollectAlignmentSummaryMetrics {
 
   input:
   set sampleID, libID, laneID, file(bam) from markduplicatesBams_asMetrics
+  file gf from file(params.genomeFasta)
+  file gi from file(params.genomeIndex)
+  file gd from file(params.genomeDict)
 
   output:
   file("${sampleID}_${libID}_${laneID}.txt") into lane_AsMetrics_lane
 
   """
   mkdir -p picard_tmp
-  java -jar ${params.picardJar} CollectAlignmentSummaryMetrics \
+  java -jar /usr/local/opt/picard.jar CollectAlignmentSummaryMetrics \
     TMP_DIR=picard_tmp \
-    R=${params.genomeFasta} \
+    R=${gf} \
     I=${bam} \
     O=${sampleID}_${libID}_${laneID}.txt
   """
@@ -382,15 +326,18 @@ process LaneCollectWgsMetrics {
 
   input:
   set sampleID, libID, laneID, file(bam) from markduplicatesBams_wgsMetrics
+  file gf from file(params.genomeFasta)
+  file gi from file(params.genomeIndex)
+  file gd from file(params.genomeDict)
 
   output:
   file("${sampleID}_${libID}_${laneID}.txt") into lane_WgsMetrics
 
   """
   mkdir -p picard_tmp
-  java -jar ${params.picardJar} CollectWgsMetrics \
+  java -jar /usr/local/opt/picard.jar CollectWgsMetrics \
     TMP_DIR=picard_tmp \
-    R=${params.genomeFasta} \
+    R=${gf} \
     I=${bam} \
     O=${sampleID}_${libID}_${laneID}.txt
   """
@@ -417,104 +364,6 @@ process LaneFlagStat {
   """
 }
 
-process IndexBams {
-  tag "${sampleID}-${libID}-${laneID}"
-  
-  cpus { 2 + (1 * task.attempt) }
-  memory { 8.GB  + (4.GB * task.attempt) }
-  time { 4.h + (2.h * task.attempt) }
-  errorStrategy { task.exitStatus == 143 ? 'retry' : 'finish' }
-  maxRetries 5
-  maxErrors '-1'
-
-  input:
-  set sampleID, libID, laneID, file(bam) from markduplicatesBams_index
-
-  output:
-  set sampleID, libID, laneID, file(bam), file("*.md.bam.bai") into markduplicatesBamsBais
-
-  """
-  samtools index ${bam}
-
-  """
-}
-
-markduplicatesBamsBais = markduplicatesBamsBais.groupTuple(by:0)
-markduplicatesBamsBais.into {mdbams_interval; mdbams_realignment}
-
-process CreateIntervals {
-  publishDir "outputs/stages/bam-intervals"
-  tag "$sampleID"
-
-  cpus 8
-  memory { 32.GB + (8.GB * task.attempt) }
-  time { 12.h * task.attempt }
-  errorStrategy { task.exitStatus == 143 ? 'retry' : 'finish' }
-  maxRetries 5
-  maxErrors '-1'
-
-  input:
-  set sampleID, libID, laneID, file(bams), file(bais) from mdbams_interval
-  file gf from file(params.genomeFasta)
-  file gi from file(params.genomeIndex)
-  file gd from file(params.genomeDict)
-
-  output:
-  set sampleID, file("*.intervals") into intervals
-
-  script:
-  input = bams.collect{"-I $it"}.join(' ')
-
-  """
-  java -Xmx${task.memory.toGiga()}g -jar ${params.gatkJar} \
-  -T RealignerTargetCreator \
-  $input \
-  -R $gf \
-  -nt ${task.cpus} \
-  -o ${sampleID}.intervals
-
-  """
-}
-
-// Combine bams with intervals
-mdbams_realignment = mdbams_realignment.phase(intervals) {it -> it[0]}
-mdbams_realignment = mdbams_realignment.map{a, b -> [a[0], a[1], a[2], a[3], a[4], b[1]]}
-
-process Realign {
-  publishDir "outputs/aligned-bams", mode: 'copy'
-  tag "$sampleID"
-
-  memory { 32.GB + (8.GB * task.attempt) }
-  time { 12.h * task.attempt }
-  errorStrategy { task.exitStatus == 143 ? 'retry' : 'finish' }
-  maxRetries 5
-  maxErrors '-1'
-
-  input:
-  set sampleID, libIDs, laneIDs, file(bams), file(bais), file(intervals) from mdbams_realignment
-  file gf from file(params.genomeFasta)
-  file gi from file(params.genomeIndex)
-  file gd from file(params.genomeDict)
-
-  output:
-  set sampleID, file("*.md.real.bam"), file("*.md.real.bai") into realignedBams
-
-  script:
-  input = bams.collect{"-I $it"}.join(' ')
-
-  """
-  java -Xmx${task.memory.toGiga()}g -jar ${params.gatkJar} \
-  -T IndelRealigner \
-  $input \
-  -R $gf \
-  -targetIntervals $intervals \
-  -o '${sampleID}.md.real.bam'
-
-  """
-}
-
-realignedBams.into { realignedBams_flagstat; realignedBams_asMetrics; realignedBams_wgsMetrics; realignedBams_collectAlignment; realignedBams_preseq}
-
 
 process SampleCollectAlignmentSummaryMetrics {
   publishDir "outputs/qc/sample-alignment-summary-metrics", mode: 'copy'
@@ -528,16 +377,19 @@ process SampleCollectAlignmentSummaryMetrics {
   maxErrors '-1'
 
   input:
-  set sampleID, file(bam) from realignedBams_asMetrics
+  set sampleID, file(bam) from sampleBams_asMetrics
+  file gf from file(params.genomeFasta)
+  file gi from file(params.genomeIndex)
+  file gd from file(params.genomeDict)
 
   output:
   file("${sampleID}.txt") into sample_AsMetrics
 
   """
   mkdir -p picard_tmp
-  java -jar ${params.picardJar} CollectAlignmentSummaryMetrics \
+  java -jar /usr/local/opt/picard.jar CollectAlignmentSummaryMetrics \
     TMP_DIR=picard_tmp \
-    R=${params.genomeFasta} \
+    R=${gf} \
     I=${bam} \
     O=${sampleID}.txt
   """
@@ -555,16 +407,19 @@ process SampleCollectWgsMetrics {
   maxErrors '-1'
 
   input:
-  set sampleID, file(bam) from realignedBams_wgsMetrics
+  set sampleID, file(bam) from sampleBams_wgsMetrics
+  file gf from file(params.genomeFasta)
+  file gi from file(params.genomeIndex)
+  file gd from file(params.genomeDict)
 
   output:
   file("${sampleID}.txt") into sample_WgsMetrics
 
   """
   mkdir -p picard_tmp
-  java -jar ${params.picardJar} CollectWgsMetrics \
+  java -jar /usr/local/opt/picard.jar CollectWgsMetrics \
     TMP_DIR=picard_tmp \
-    R=${params.genomeFasta} \
+    R=${gf} \
     I=${bam} \
     O=${sampleID}.txt
   """
@@ -581,7 +436,7 @@ process SampleFlagStat {
   maxErrors '-1'
 
   input:
-  set sampleID, file(bam), file(bai) from realignedBams_flagstat
+  set sampleID, file(bam), file(bai) from sampleBams_flagstat
 
   output:
   file("${sampleID}.txt") into sample_flagstat
@@ -602,7 +457,7 @@ process SamplePreseq {
   maxErrors '-1'
   
   input:
-  set sampleID, file(bam), file(bai) from realignedBams_preseq
+  set sampleID, file(bam), file(bai) from sampleBams_preseq
 
   output:
   file("${sampleID}*") into sample_preseq
@@ -612,7 +467,6 @@ process SamplePreseq {
   preseq lc_extrap -o ${sampleID}.lc_extrap -bam ${bam}
   """
 }
-
 
 laneqc_files = lane_IsMetrics.mix(lane_AsMetrics_lane, lane_WgsMetrics, lane_flagstat).toList()
 sampleqc_files = sample_AsMetrics.mix(sample_WgsMetrics, sample_flagstat, sample_preseq).toList()
@@ -658,7 +512,6 @@ process SampleMultiQC {
   multiqc -f -o sampleqc .
   """
 }
-
 
 workflow.onComplete {
     println "Pipeline completed at: $workflow.complete"
