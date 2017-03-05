@@ -94,7 +94,7 @@ process FastQC {
   publishDir "outputs/qc/fastqc", mode: 'copy'
   tag "${sampleID}-${libID}-${laneID}"
 
-  cpus { 1 * task.attempt }
+  cpus 1
   memory { 4.GB }
   time { 4.h + (2.h * task.attempt) }
   errorStrategy { task.exitStatus == 143 ? 'retry' : 'ignore' }
